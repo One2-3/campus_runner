@@ -35,6 +35,7 @@ public class Main extends ApplicationAdapter {
     private Rectangle flag;
     private Array<Rectangle> blocks;
     private Array<GradeItem> gradeItems;
+    private Array<MovingPlatform> movingPlatforms;
     private int collectedItemCount;
     private int stageScore;
     private GameState gameState = GameState.PLAYING;
@@ -95,6 +96,9 @@ public class Main extends ApplicationAdapter {
         // SpriteBatch와 ShapeRenderer는 동시에 begin하지 않습니다.
         itemRenderer.setProjectionMatrix(camera.combined);
         itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        for (MovingPlatform platform : movingPlatforms) {
+            platform.render(itemRenderer);
+        }
         for (GradeItem item : gradeItems) {
             item.render(itemRenderer);
         }
@@ -156,6 +160,7 @@ public class Main extends ApplicationAdapter {
     private void restartStage() {
         player.reset(stage.getStartX(), stage.getStartY());
         gradeItems = stage.getGradeItems();
+        movingPlatforms = stage.getMovingPlatforms();
         collectedItemCount = 0;
         stageScore = 0;
         camera.position.set(getCameraX(),
@@ -182,7 +187,9 @@ public class Main extends ApplicationAdapter {
         }
         if (gameState != GameState.PLAYING || dt <= 0) return;
 
-        player.update(dt, blocks, stage.getWorldWidth());
+        // 이동량을 먼저 확정한 뒤 플레이어의 탑승/밀림과 자체 이동을 처리합니다.
+        for (MovingPlatform platform : movingPlatforms) platform.update(dt);
+        player.update(dt, blocks, movingPlatforms, stage.getWorldWidth());
 
         // PLAYING에서만 실행되며, 수집 성공 순간에만 각각 누적합니다.
         for (GradeItem item : gradeItems) {
