@@ -43,7 +43,12 @@ public final class StageFactory {
         items.add(new GradeItem(1838, 224, 24, 24));
         items.add(new GradeItem(2140, 318, 24, 24));
         items.add(new GradeItem(2340, 368, 24, 24));
+        Array<MovingPlatform> movingPlatforms = new Array<>();
+        // 바닥 위 통행 높이(44)를 확보하고 기존 장애물과 겹치지 않는 경로입니다.
+        movingPlatforms.add(new MovingPlatform(500, 110, 780, 110, 96, 18, 70));
+        // 두 번째 낭떠러지 안의 선택형 승강 발판입니다.
+        movingPlatforms.add(new MovingPlatform(1360, 70, 1360, 230, 64, 18, 55));
         return new StageDefinition(1, "1학년", 2600, 80, 60,
-            new Rectangle(2420, 344, 20, 100), blocks, items);
+            new Rectangle(2420, 344, 20, 100), blocks, items, movingPlatforms);
     }
 }
