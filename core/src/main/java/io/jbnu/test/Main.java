@@ -16,6 +16,8 @@ import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
+import java.util.Arrays;
+
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
@@ -40,6 +42,8 @@ public class Main extends ApplicationAdapter {
     private Array<PatrollingEnemy> enemies;
     private int collectedItemCount;
     private int stageScore;
+    private int currentStageNumber = 1;
+    private final StageResult[] completedResults = new StageResult[StageFactory.STAGE_COUNT];
     private GameState gameState = GameState.PLAYING;
 
 
@@ -65,12 +69,7 @@ public class Main extends ApplicationAdapter {
         font.getData().setScale(2f);
         textLayout = new GlyphLayout();
 
-        stage = StageFactory.createStage(1);
-        // 실행용 사본을 한 번 받아 사용하며 스테이지 원본은 보존합니다.
-        flag = stage.getFlag();
-        blocks = stage.getBlocks();
-        player = new Player(stage.getStartX(), stage.getStartY());
-        restartStage();
+        startNewGame();
     }
 
 
@@ -134,18 +133,24 @@ public class Main extends ApplicationAdapter {
 
         String title;
         String instruction;
+        String detail = null;
         switch (gameState) {
             case PAUSED:
                 title = "PAUSED";
                 instruction = "Press ESC to Resume";
                 break;
             case STAGE_CLEAR:
-                title = "STAGE CLEAR";
-                instruction = "Press ENTER to Restart";
+                title = "YEAR " + currentStageNumber + " CLEAR";
+                instruction = "PRESS ENTER FOR NEXT YEAR";
                 break;
             case GAME_OVER:
                 title = "GAME OVER";
-                instruction = "Press ENTER to Restart";
+                instruction = "PRESS ENTER TO RETRY";
+                break;
+            case GAME_COMPLETE:
+                title = "GRADUATION COMPLETE";
+                detail = "TOTAL SCORE: " + getTotalScore();
+                instruction = "PRESS ENTER TO RESTART";
                 break;
             default:
                 return;
@@ -158,15 +163,35 @@ public class Main extends ApplicationAdapter {
         font.draw(batch, textLayout,
             (uiViewport.getWorldWidth() - textLayout.width) / 2f,
             (uiViewport.getWorldHeight() + textLayout.height) / 2f);
+        if (detail != null) {
+            textLayout.setText(font, detail);
+            font.draw(batch, textLayout,
+                (uiViewport.getWorldWidth() - textLayout.width) / 2f,
+                uiViewport.getWorldHeight() / 2f - 40f);
+        }
         textLayout.setText(font, instruction);
         font.draw(batch, textLayout,
             (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-            uiViewport.getWorldHeight() / 2f - 40f);
+            uiViewport.getWorldHeight() / 2f - (detail == null ? 40f : 80f));
         batch.end();
     }
 
     private void restartStage() {
-        player.reset(stage.getStartX(), stage.getStartY());
+        loadStage(currentStageNumber);
+    }
+
+    private void startNewGame() {
+        Arrays.fill(completedResults, null);
+        loadStage(1);
+    }
+
+    private void loadStage(int stageNumber) {
+        stage = StageFactory.createStage(stageNumber);
+        currentStageNumber = stage.getStageNumber();
+        // 이전 학년의 플레이어와 실행용 객체를 모두 교체합니다.
+        player = new Player(stage.getStartX(), stage.getStartY());
+        flag = stage.getFlag();
+        blocks = stage.getBlocks();
         gradeItems = stage.getGradeItems();
         movingPlatforms = stage.getMovingPlatforms();
         timedTraps = stage.getTimedTraps();
@@ -179,12 +204,39 @@ public class Main extends ApplicationAdapter {
         gameState = GameState.PLAYING;
     }
 
+    private void recordStageResult() {
+        int index = currentStageNumber - 1;
+        if (completedResults[index] == null) {
+            completedResults[index] = new StageResult(currentStageNumber, stageScore, collectedItemCount);
+        }
+    }
+
+    private int getTotalScore() {
+        int total = 0;
+        for (StageResult result : completedResults) {
+            if (result != null) total += result.getScore();
+        }
+        return total;
+    }
+
 
     private void update(float dt) {
         // 상태 입력은 물리 갱신 전에 처리하여 정지 상태에서도 동작합니다.
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
-            restartStage();
-            return;
+            switch (gameState) {
+                case GAME_OVER:
+                    restartStage();
+                    return;
+                case STAGE_CLEAR:
+                    loadStage(currentStageNumber + 1);
+                    return;
+                case GAME_COMPLETE:
+                    startNewGame();
+                    return;
+                default:
+                    // PLAYING/PAUSED에서는 Enter로 상태나 스테이지를 변경하지 않습니다.
+                    break;
+            }
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (gameState == GameState.PLAYING) {
@@ -230,8 +282,12 @@ public class Main extends ApplicationAdapter {
             gameState = GameState.GAME_OVER;
         }
 
-        // 5. 깃발에 닿으면 클리어 상태로 전환합니다.
-        else if (player.overlaps(flag)) gameState = GameState.STAGE_CLEAR;
+        // 마지막 학년도 결과를 저장한 뒤 전체 완료로 전환합니다.
+        else if (player.overlaps(flag)) {
+            recordStageResult();
+            gameState = currentStageNumber == StageFactory.STAGE_COUNT
+                ? GameState.GAME_COMPLETE : GameState.STAGE_CLEAR;
+        }
 
         // 6. 카메라는 X축으로만 따라갑니다.
         camera.position.x = getCameraX();

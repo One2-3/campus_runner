@@ -5,19 +5,45 @@ import com.badlogic.gdx.utils.Array;
 
 /** 학년 번호에 해당하는 스테이지 정의를 생성합니다. */
 public final class StageFactory {
+    public static final int STAGE_COUNT = 4;
+
     private StageFactory() {
     }
 
     public static StageDefinition createStage(int stageNumber) {
         switch (stageNumber) {
             case 1:
-                return createFirstYear();
+                return createFreshman();
+            case 2:
+                return createSophomore();
+            case 3:
+                return createJunior();
+            case 4:
+                return createSenior();
             default:
                 throw new IllegalArgumentException("Unsupported stage: " + stageNumber);
         }
     }
 
-    private static StageDefinition createFirstYear() {
+    private static StageDefinition createFreshman() {
+        return createTestStage(1, "Freshman");
+    }
+
+    private static StageDefinition createSophomore() {
+        return createTestStage(2, "Sophomore");
+    }
+
+    private static StageDefinition createJunior() {
+        return createTestStage(3, "Junior");
+    }
+
+    private static StageDefinition createSenior() {
+        return createTestStage(4, "Senior");
+    }
+
+    // 기존 완성 맵을 보존합니다. 향후 학년별 생성 함수에서 독자적인 배치로 교체합니다.
+    // 호출할 때마다 새 데이터와 객체를 생성하므로 학년 간 상태를 공유하지 않습니다.
+    private static StageDefinition createTestStage(int stageNumber, String stageName) {
         Array<Rectangle> blocks = new Array<>();
         // 기존 실습 맵의 좌표와 크기를 그대로 사용합니다.
         blocks.add(new Rectangle(0, 0, 620, 60));
@@ -56,7 +82,7 @@ public final class StageFactory {
         // 몸 전체가 바닥/고정 발판 안에 머물며 함정 구간과 분리됩니다.
         enemies.add(new PatrollingEnemy(220, 60, 28, 28, 190, 248, 45, true));
         enemies.add(new PatrollingEnemy(1180, 204, 28, 28, 1100, 1190, 38, false));
-        return new StageDefinition(1, "1학년", 2600, 80, 60,
+        return new StageDefinition(stageNumber, stageName, 2600, 80, 60,
             new Rectangle(2420, 344, 20, 100), blocks, items, movingPlatforms, timedTraps, enemies);
     }
 }
