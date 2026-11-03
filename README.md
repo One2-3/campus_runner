@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Project2
 
 A [libGDX](https://libgdx.com/) project generated with [gdx-liftoff](https://github.com/libgdx/gdx-liftoff).
@@ -31,3 +32,7 @@ Useful Gradle tasks and flags:
 
 Note that most tasks that are not specific to a single project can be run with `name:` prefix, where the `name` should be replaced with the ID of a specific project.
 For example, `core:clean` removes `build` folder only from the `core` project.
+=======
+# campus_runner
+게임및혼합현실 중간과제 2d 플랫포머 게임입니다.
+>>>>>>> origin/main
