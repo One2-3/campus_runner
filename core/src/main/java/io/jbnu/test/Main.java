@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
@@ -27,17 +28,22 @@ public class Main extends ApplicationAdapter {
     private FitViewport uiViewport;
     private BitmapFont font;
     private GlyphLayout textLayout;
+    private ShapeRenderer itemRenderer;
 
     private Player player;
     private StageDefinition stage;
     private Rectangle flag;
     private Array<Rectangle> blocks;
+    private Array<GradeItem> gradeItems;
+    private int collectedItemCount;
+    private int stageScore;
     private GameState gameState = GameState.PLAYING;
 
 
     @Override
     public void create() {
         batch = new SpriteBatch();
+        itemRenderer = new ShapeRenderer();
         playerTexture = new Texture(Gdx.files.internal("player.png"));
         blockTexture = new Texture(Gdx.files.internal("block.png"));
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
@@ -86,8 +92,29 @@ public class Main extends ApplicationAdapter {
         player.render(batch, playerTexture);
         batch.end();
 
+        // SpriteBatch와 ShapeRenderer는 동시에 begin하지 않습니다.
+        itemRenderer.setProjectionMatrix(camera.combined);
+        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        for (GradeItem item : gradeItems) {
+            item.render(itemRenderer);
+        }
+        itemRenderer.end();
+
+        renderHud();
         renderStateUi();
 
+    }
+
+    private void renderHud() {
+        uiViewport.apply();
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        float top = uiViewport.getWorldHeight() - 20f;
+        font.draw(batch, "YEAR: " + stage.getStageNumber(), 20f, top);
+        font.draw(batch, "ITEMS: " + collectedItemCount + " / " + gradeItems.size,
+            20f, top - 30f);
+        font.draw(batch, "SCORE: " + stageScore, 20f, top - 60f);
+        batch.end();
     }
 
     private void renderStateUi() {
@@ -128,6 +155,9 @@ public class Main extends ApplicationAdapter {
 
     private void restartStage() {
         player.reset(stage.getStartX(), stage.getStartY());
+        gradeItems = stage.getGradeItems();
+        collectedItemCount = 0;
+        stageScore = 0;
         camera.position.set(getCameraX(),
             viewport.getWorldHeight() / 2f, 0);
         camera.update();
@@ -153,6 +183,14 @@ public class Main extends ApplicationAdapter {
         if (gameState != GameState.PLAYING || dt <= 0) return;
 
         player.update(dt, blocks, stage.getWorldWidth());
+
+        // PLAYING에서만 실행되며, 수집 성공 순간에만 각각 누적합니다.
+        for (GradeItem item : gradeItems) {
+            if (item.tryCollect(player)) {
+                collectedItemCount++;
+                stageScore += item.getScore();
+            }
+        }
 
         // 4. 낭떠러지에 떨어지면 실패 상태로 전환합니다.
         if (player.getY() < -100) {
@@ -190,5 +228,6 @@ public class Main extends ApplicationAdapter {
         blockTexture.dispose();
         flagTexture.dispose();
         font.dispose();
+        itemRenderer.dispose();
     }
 }
