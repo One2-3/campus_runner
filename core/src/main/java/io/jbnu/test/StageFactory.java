@@ -52,7 +52,11 @@ public final class StageFactory {
         // 평평한 바닥 위의 짧은 구간으로, 대기하거나 점프로 회피할 수 있습니다.
         timedTraps.add(new TimedTrap(420, 60, 48, 24, 0.0));
         timedTraps.add(new TimedTrap(1550, 60, 48, 24, 1.2));
+        Array<PatrollingEnemy> enemies = new Array<>();
+        // 몸 전체가 바닥/고정 발판 안에 머물며 함정 구간과 분리됩니다.
+        enemies.add(new PatrollingEnemy(220, 60, 28, 28, 190, 248, 45, true));
+        enemies.add(new PatrollingEnemy(1180, 204, 28, 28, 1100, 1190, 38, false));
         return new StageDefinition(1, "1학년", 2600, 80, 60,
-            new Rectangle(2420, 344, 20, 100), blocks, items, movingPlatforms, timedTraps);
+            new Rectangle(2420, 344, 20, 100), blocks, items, movingPlatforms, timedTraps, enemies);
     }
 }

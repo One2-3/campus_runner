@@ -14,6 +14,7 @@ public final class StageDefinition {
     private final Array<GradeItem> gradeItems;
     private final Array<MovingPlatform> movingPlatforms;
     private final Array<TimedTrap> timedTraps;
+    private final Array<PatrollingEnemy> enemies;
 
     public StageDefinition(int stageNumber, String stageName, float worldWidth,
                            float startX, float startY, Rectangle flag,
@@ -41,6 +42,15 @@ public final class StageDefinition {
                            float startX, float startY, Rectangle flag,
                            Array<Rectangle> blocks, Array<GradeItem> gradeItems,
                            Array<MovingPlatform> movingPlatforms, Array<TimedTrap> timedTraps) {
+        this(stageNumber, stageName, worldWidth, startX, startY, flag, blocks, gradeItems,
+            movingPlatforms, timedTraps, new Array<PatrollingEnemy>());
+    }
+
+    public StageDefinition(int stageNumber, String stageName, float worldWidth,
+                           float startX, float startY, Rectangle flag,
+                           Array<Rectangle> blocks, Array<GradeItem> gradeItems,
+                           Array<MovingPlatform> movingPlatforms, Array<TimedTrap> timedTraps,
+                           Array<PatrollingEnemy> enemies) {
         this.stageNumber = stageNumber;
         this.stageName = stageName;
         this.worldWidth = worldWidth;
@@ -51,6 +61,7 @@ public final class StageDefinition {
         this.gradeItems = copyGradeItems(gradeItems);
         this.movingPlatforms = copyMovingPlatforms(movingPlatforms);
         this.timedTraps = copyTimedTraps(timedTraps);
+        this.enemies = copyEnemies(enemies);
     }
 
     public int getStageNumber() {
@@ -91,6 +102,16 @@ public final class StageDefinition {
 
     public Array<TimedTrap> getTimedTraps() {
         return copyTimedTraps(timedTraps);
+    }
+
+    public Array<PatrollingEnemy> getEnemies() {
+        return copyEnemies(enemies);
+    }
+
+    private static Array<PatrollingEnemy> copyEnemies(Array<PatrollingEnemy> source) {
+        Array<PatrollingEnemy> copy = new Array<>(source.size);
+        for (PatrollingEnemy enemy : source) copy.add(enemy.copyInitial());
+        return copy;
     }
 
     private static Array<TimedTrap> copyTimedTraps(Array<TimedTrap> source) {

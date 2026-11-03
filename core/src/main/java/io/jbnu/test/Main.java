@@ -37,6 +37,7 @@ public class Main extends ApplicationAdapter {
     private Array<GradeItem> gradeItems;
     private Array<MovingPlatform> movingPlatforms;
     private Array<TimedTrap> timedTraps;
+    private Array<PatrollingEnemy> enemies;
     private int collectedItemCount;
     private int stageScore;
     private GameState gameState = GameState.PLAYING;
@@ -103,6 +104,9 @@ public class Main extends ApplicationAdapter {
         for (TimedTrap trap : timedTraps) {
             trap.render(itemRenderer);
         }
+        for (PatrollingEnemy enemy : enemies) {
+            enemy.render(itemRenderer);
+        }
         for (GradeItem item : gradeItems) {
             item.render(itemRenderer);
         }
@@ -166,6 +170,7 @@ public class Main extends ApplicationAdapter {
         gradeItems = stage.getGradeItems();
         movingPlatforms = stage.getMovingPlatforms();
         timedTraps = stage.getTimedTraps();
+        enemies = stage.getEnemies();
         collectedItemCount = 0;
         stageScore = 0;
         camera.position.set(getCameraX(),
@@ -195,6 +200,7 @@ public class Main extends ApplicationAdapter {
         // 이동량을 먼저 확정한 뒤 플레이어의 탑승/밀림과 자체 이동을 처리합니다.
         for (MovingPlatform platform : movingPlatforms) platform.update(dt);
         for (TimedTrap trap : timedTraps) trap.update(dt);
+        for (PatrollingEnemy enemy : enemies) enemy.update(dt);
         player.update(dt, blocks, movingPlatforms, stage.getWorldWidth());
 
         // PLAYING에서만 실행되며, 수집 성공 순간에만 각각 누적합니다.
@@ -213,7 +219,14 @@ public class Main extends ApplicationAdapter {
                 break;
             }
         }
-        if (player.getY() < -100 || trapHit) {
+        boolean enemyHit = false;
+        for (PatrollingEnemy enemy : enemies) {
+            if (enemy.touches(player)) {
+                enemyHit = true;
+                break;
+            }
+        }
+        if (player.getY() < -100 || trapHit || enemyHit) {
             gameState = GameState.GAME_OVER;
         }
 
