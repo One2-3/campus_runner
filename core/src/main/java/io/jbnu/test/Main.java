@@ -36,6 +36,7 @@ public class Main extends ApplicationAdapter {
     private Array<Rectangle> blocks;
     private Array<GradeItem> gradeItems;
     private Array<MovingPlatform> movingPlatforms;
+    private Array<TimedTrap> timedTraps;
     private int collectedItemCount;
     private int stageScore;
     private GameState gameState = GameState.PLAYING;
@@ -99,6 +100,9 @@ public class Main extends ApplicationAdapter {
         for (MovingPlatform platform : movingPlatforms) {
             platform.render(itemRenderer);
         }
+        for (TimedTrap trap : timedTraps) {
+            trap.render(itemRenderer);
+        }
         for (GradeItem item : gradeItems) {
             item.render(itemRenderer);
         }
@@ -161,6 +165,7 @@ public class Main extends ApplicationAdapter {
         player.reset(stage.getStartX(), stage.getStartY());
         gradeItems = stage.getGradeItems();
         movingPlatforms = stage.getMovingPlatforms();
+        timedTraps = stage.getTimedTraps();
         collectedItemCount = 0;
         stageScore = 0;
         camera.position.set(getCameraX(),
@@ -189,6 +194,7 @@ public class Main extends ApplicationAdapter {
 
         // 이동량을 먼저 확정한 뒤 플레이어의 탑승/밀림과 자체 이동을 처리합니다.
         for (MovingPlatform platform : movingPlatforms) platform.update(dt);
+        for (TimedTrap trap : timedTraps) trap.update(dt);
         player.update(dt, blocks, movingPlatforms, stage.getWorldWidth());
 
         // PLAYING에서만 실행되며, 수집 성공 순간에만 각각 누적합니다.
@@ -199,8 +205,15 @@ public class Main extends ApplicationAdapter {
             }
         }
 
-        // 4. 낭떠러지에 떨어지면 실패 상태로 전환합니다.
-        if (player.getY() < -100) {
+        // 실패가 깃발보다 우선합니다. 같은 프레임의 동시 접촉도 GAME_OVER입니다.
+        boolean trapHit = false;
+        for (TimedTrap trap : timedTraps) {
+            if (trap.isDangerousTo(player)) {
+                trapHit = true;
+                break;
+            }
+        }
+        if (player.getY() < -100 || trapHit) {
             gameState = GameState.GAME_OVER;
         }
 

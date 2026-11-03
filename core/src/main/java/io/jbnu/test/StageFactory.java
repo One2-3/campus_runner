@@ -48,7 +48,11 @@ public final class StageFactory {
         movingPlatforms.add(new MovingPlatform(500, 110, 780, 110, 96, 18, 70));
         // 두 번째 낭떠러지 안의 선택형 승강 발판입니다.
         movingPlatforms.add(new MovingPlatform(1360, 70, 1360, 230, 64, 18, 55));
+        Array<TimedTrap> timedTraps = new Array<>();
+        // 평평한 바닥 위의 짧은 구간으로, 대기하거나 점프로 회피할 수 있습니다.
+        timedTraps.add(new TimedTrap(420, 60, 48, 24, 0.0));
+        timedTraps.add(new TimedTrap(1550, 60, 48, 24, 1.2));
         return new StageDefinition(1, "1학년", 2600, 80, 60,
-            new Rectangle(2420, 344, 20, 100), blocks, items, movingPlatforms);
+            new Rectangle(2420, 344, 20, 100), blocks, items, movingPlatforms, timedTraps);
     }
 }

@@ -13,6 +13,7 @@ public final class StageDefinition {
     private final Array<Rectangle> blocks;
     private final Array<GradeItem> gradeItems;
     private final Array<MovingPlatform> movingPlatforms;
+    private final Array<TimedTrap> timedTraps;
 
     public StageDefinition(int stageNumber, String stageName, float worldWidth,
                            float startX, float startY, Rectangle flag,
@@ -32,6 +33,14 @@ public final class StageDefinition {
                            float startX, float startY, Rectangle flag,
                            Array<Rectangle> blocks, Array<GradeItem> gradeItems,
                            Array<MovingPlatform> movingPlatforms) {
+        this(stageNumber, stageName, worldWidth, startX, startY, flag, blocks, gradeItems,
+            movingPlatforms, new Array<TimedTrap>());
+    }
+
+    public StageDefinition(int stageNumber, String stageName, float worldWidth,
+                           float startX, float startY, Rectangle flag,
+                           Array<Rectangle> blocks, Array<GradeItem> gradeItems,
+                           Array<MovingPlatform> movingPlatforms, Array<TimedTrap> timedTraps) {
         this.stageNumber = stageNumber;
         this.stageName = stageName;
         this.worldWidth = worldWidth;
@@ -41,6 +50,7 @@ public final class StageDefinition {
         this.blocks = copyBlocks(blocks);
         this.gradeItems = copyGradeItems(gradeItems);
         this.movingPlatforms = copyMovingPlatforms(movingPlatforms);
+        this.timedTraps = copyTimedTraps(timedTraps);
     }
 
     public int getStageNumber() {
@@ -77,6 +87,16 @@ public final class StageDefinition {
 
     public Array<MovingPlatform> getMovingPlatforms() {
         return copyMovingPlatforms(movingPlatforms);
+    }
+
+    public Array<TimedTrap> getTimedTraps() {
+        return copyTimedTraps(timedTraps);
+    }
+
+    private static Array<TimedTrap> copyTimedTraps(Array<TimedTrap> source) {
+        Array<TimedTrap> copy = new Array<>(source.size);
+        for (TimedTrap trap : source) copy.add(trap.copyInitial());
+        return copy;
     }
 
     private static Array<MovingPlatform> copyMovingPlatforms(Array<MovingPlatform> source) {
