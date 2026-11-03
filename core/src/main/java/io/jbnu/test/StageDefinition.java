@@ -11,10 +11,18 @@ public final class StageDefinition {
     private final float startX, startY;
     private final Rectangle flag;
     private final Array<Rectangle> blocks;
+    private final Array<GradeItem> gradeItems;
 
     public StageDefinition(int stageNumber, String stageName, float worldWidth,
                            float startX, float startY, Rectangle flag,
                            Array<Rectangle> blocks) {
+        this(stageNumber, stageName, worldWidth, startX, startY, flag, blocks,
+            new Array<GradeItem>());
+    }
+
+    public StageDefinition(int stageNumber, String stageName, float worldWidth,
+                           float startX, float startY, Rectangle flag,
+                           Array<Rectangle> blocks, Array<GradeItem> gradeItems) {
         this.stageNumber = stageNumber;
         this.stageName = stageName;
         this.worldWidth = worldWidth;
@@ -22,6 +30,7 @@ public final class StageDefinition {
         this.startY = startY;
         this.flag = new Rectangle(flag);
         this.blocks = copyBlocks(blocks);
+        this.gradeItems = copyGradeItems(gradeItems);
     }
 
     public int getStageNumber() {
@@ -50,6 +59,18 @@ public final class StageDefinition {
 
     public Array<Rectangle> getBlocks() {
         return copyBlocks(blocks);
+    }
+
+    public Array<GradeItem> getGradeItems() {
+        return copyGradeItems(gradeItems);
+    }
+
+    private static Array<GradeItem> copyGradeItems(Array<GradeItem> source) {
+        Array<GradeItem> copy = new Array<>(source.size);
+        for (GradeItem item : source) {
+            copy.add(item.copyUncollected());
+        }
+        return copy;
     }
 
     private static Array<Rectangle> copyBlocks(Array<Rectangle> source) {

@@ -31,7 +31,19 @@ public final class StageFactory {
         blocks.add(new Rectangle(1930, 60, 120, 210));
         blocks.add(new Rectangle(2100, 270, 110, 24));
         blocks.add(new Rectangle(2280, 320, 210, 24));
+        Array<GradeItem> items = new Array<>();
+        // 바닥 경로, 장애물 위, 선택 점프 위치에 배치합니다. 크기는 24 x 24입니다.
+        items.add(new GradeItem(180, 84, 24, 24));
+        items.add(new GradeItem(330, 148, 24, 24));
+        items.add(new GradeItem(500, 180, 24, 24));
+        items.add(new GradeItem(820, 84, 24, 24));
+        items.add(new GradeItem(940, 164, 24, 24));
+        items.add(new GradeItem(1140, 228, 24, 24));
+        items.add(new GradeItem(1520, 84, 24, 24));
+        items.add(new GradeItem(1838, 224, 24, 24));
+        items.add(new GradeItem(2140, 318, 24, 24));
+        items.add(new GradeItem(2340, 368, 24, 24));
         return new StageDefinition(1, "1학년", 2600, 80, 60,
-            new Rectangle(2420, 344, 20, 100), blocks);
+            new Rectangle(2420, 344, 20, 100), blocks, items);
     }
 }
