@@ -3,11 +3,12 @@ package io.jbnu.test;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 
-/** 고체 충돌에는 참여하지 않고 ACTIVE일 때만 위험한 주기형 함정입니다. */
+/** 고체 충돌에는 참여하지 않으며 ACTIVE일 때 위험합니다. 고정 가시는 항상 ACTIVE입니다. */
 public final class TimedTrap {
     private final Rectangle bounds;
     private final double safeDuration, warningDuration, activeDuration, cycleDuration;
     private final double initialOffset;
+    private final boolean fixed, spikeDesign;
     private double phase;
     private TrapState state;
     private double stateElapsedTime;
@@ -19,6 +20,21 @@ public final class TimedTrap {
     public TimedTrap(float x, float y, float width, float height,
                      double safeDuration, double warningDuration, double activeDuration,
                      double initialOffset) {
+        this(x, y, width, height, safeDuration, warningDuration, activeDuration, initialOffset, false, false);
+    }
+
+    public static TimedTrap fixedSpikes(float x, float y, float width, float height) {
+        return new TimedTrap(x, y, width, height, 2.0, 0.8, 1.5, 0, true, true);
+    }
+
+    public static TimedTrap cyclingSpikes(float x, float y, float width, float height,
+                                         double safe, double warning, double active, double offset) {
+        return new TimedTrap(x, y, width, height, safe, warning, active, offset, false, true);
+    }
+
+    private TimedTrap(float x, float y, float width, float height,
+                      double safeDuration, double warningDuration, double activeDuration,
+                      double initialOffset, boolean fixed, boolean spikeDesign) {
         double cycle = safeDuration + warningDuration + activeDuration;
         if (!Float.isFinite(x) || !Float.isFinite(y)
             || !Float.isFinite(width) || !Float.isFinite(height) || width <= 0 || height <= 0
@@ -34,11 +50,13 @@ public final class TimedTrap {
         this.activeDuration = activeDuration;
         cycleDuration = cycle;
         this.initialOffset = initialOffset % cycleDuration;
+        this.fixed = fixed;
+        this.spikeDesign = spikeDesign;
         reset();
     }
 
     public void update(double dt) {
-        if (dt <= 0 || !Double.isFinite(dt)) return;
+        if (fixed || dt <= 0 || !Double.isFinite(dt)) return;
         // 먼저 dt를 줄여 큰 시간에도 덧셈 오버플로와 반복 루프를 피합니다.
         phase = (phase + dt % cycleDuration) % cycleDuration;
         refreshState();
@@ -46,6 +64,11 @@ public final class TimedTrap {
 
     public void reset() {
         phase = initialOffset;
+        if (fixed) {
+            state = TrapState.ACTIVE;
+            stateElapsedTime = 0;
+            return;
+        }
         refreshState();
     }
 
@@ -71,18 +94,43 @@ public final class TimedTrap {
 
     public TimedTrap copyInitial() {
         return new TimedTrap(bounds.x, bounds.y, bounds.width, bounds.height,
-            safeDuration, warningDuration, activeDuration, initialOffset);
+            safeDuration, warningDuration, activeDuration, initialOffset, fixed, spikeDesign);
     }
 
     public TrapState getState() { return state; }
     public double getStateElapsedTime() { return stateElapsedTime; }
     public Rectangle getBounds() { return new Rectangle(bounds); }
+    public boolean isFixed() { return fixed; }
 
     public boolean isDangerousTo(Player player) {
-        return state == TrapState.ACTIVE && player.overlaps(bounds);
+        if (state != TrapState.ACTIVE || !player.overlaps(bounds)) return false;
+        if (!spikeDesign) return true; // Preserve legacy test-map collision behavior.
+        Rectangle body = player.getBounds();
+        // Each upright triangle narrows monotonically above its base. At the body's
+        // lowest overlapping Y, its widest possible intersection decides contact.
+        float bottom = Math.max(bounds.y, body.y);
+        float width = bounds.width / 4f;
+        float half = width * 0.5f * (1 - (bottom - bounds.y) / bounds.height);
+        for (int i = 0; i < 4; i++) {
+            float center = bounds.x + (i + 0.5f) * width;
+            if (body.x < center + half && body.x + body.width > center - half) return true;
+        }
+        return false;
     }
 
     public void render(ShapeRenderer shapes) {
+        if (spikeDesign) {
+            if (state == TrapState.ACTIVE) shapes.setColor(0.9f, 0.12f, 0.12f, 1f);
+            else if (state == TrapState.WARNING) shapes.setColor(0.95f, 0.65f, 0.08f, 1f);
+            else shapes.setColor(0.28f, 0.30f, 0.32f, 1f);
+            float width = bounds.width / 4f;
+            for (int i = 0; i < 4; i++) {
+                float left = bounds.x + i * width;
+                shapes.triangle(left, bounds.y, left + width, bounds.y,
+                    left + width / 2f, bounds.y + bounds.height);
+            }
+            return;
+        }
         if (state == TrapState.SAFE) {
             shapes.setColor(0.45f, 0.45f, 0.45f, 1f);
             shapes.rect(bounds.x, bounds.y, bounds.width, Math.min(5f, bounds.height));

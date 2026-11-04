@@ -52,11 +52,12 @@ public final class SophomoreLevelVerification {
                 "Enter advances to Stage 4");
             check(results(game)[0] == first && results(game)[1] == second && results(game)[2].getScore() == 30,
                 "20/25/30 scores preserved after transition");
-            check(number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 10,
-                "Stage 4 loads its own counters and original items");
+            check(number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 7,
+                "Stage 4 loads its own counters and seven items");
             Method total = Main.class.getDeclaredMethod("getTotalScore");
             total.setAccessible(true);
             check((Integer) total.invoke(game) == 75, "Total is 75 after three semesters");
+            SophomoreSemester2Verification.verifyConnected(game, fps);
             route(newGame(), true, false);
             Main retry = newGame();
             failAndRetry(retry, true);
