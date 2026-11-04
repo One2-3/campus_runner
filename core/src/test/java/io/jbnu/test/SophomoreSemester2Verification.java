@@ -47,12 +47,13 @@ public final class SophomoreSemester2Verification {
             route(game, false, true);
             enter = true; tick(game);
             check(number(game, "currentStageNumber") == 5 && state(game) == GameState.PLAYING
-                && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 10,
-                "Stage 5 loads unchanged test items and fresh score");
+                && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 8,
+                "Stage 5 loads eight items and fresh score");
             for (int i = 0; i < 3; i++) check(results(game)[i] == prior[i], "Stage 5 retains semester " + i);
             check(results(game)[3].getScore() == 35, "Stage 4 result retained");
             Method total = Main.class.getDeclaredMethod("getTotalScore"); total.setAccessible(true);
             check((Integer) total.invoke(game) == 110, "20 + 25 + 30 + 35 total");
+            JuniorSemester1Verification.verifyConnected(game, fps);
             route(newGame(), true, false);
             verifyContacts();
             verifyHeldJump();

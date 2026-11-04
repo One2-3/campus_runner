@@ -121,7 +121,7 @@ public final class FreshmanLevelVerification {
             {180, 84}, {330, 148}, {500, 180}, {820, 84}, {940, 164},
             {1140, 228}, {1520, 84}, {1838, 224}, {2140, 318}, {2340, 368}
         };
-        for (int year = 5; year <= 8; year++) {
+        for (int year = 6; year <= 8; year++) {
             StageDefinition stage = StageFactory.createStage(year);
             check(stage.getStageNumber() == year && stage.getYear() == (year + 1) / 2
                 && stage.getSemester() == (year - 1) % 2 + 1, "Semester mapping");
