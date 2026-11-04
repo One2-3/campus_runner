@@ -184,4 +184,9 @@ public class Player {
     public boolean overlaps(Rectangle rectangle) {
         return bounds.overlaps(rectangle);
     }
+
+    /** Read-only collision geometry for triangular hazards. */
+    public Rectangle getBounds() {
+        return new Rectangle(bounds);
+    }
 }
