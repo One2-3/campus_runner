@@ -3,46 +3,50 @@ package io.jbnu.test;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 
-/** 학년 번호에 해당하는 스테이지 정의를 생성합니다. */
+/** 1~8학기에 해당하는 독립적인 스테이지 정의를 생성합니다. */
 public final class StageFactory {
-    public static final int STAGE_COUNT = 4;
+    public static final int STAGE_COUNT = 8;
 
     private StageFactory() {
     }
 
     public static StageDefinition createStage(int stageNumber) {
-        switch (stageNumber) {
-            case 1:
-                return createFreshman();
-            case 2:
-                return createSophomore();
-            case 3:
-                return createJunior();
-            case 4:
-                return createSenior();
-            default:
-                throw new IllegalArgumentException("Unsupported stage: " + stageNumber);
+        if (stageNumber < 1 || stageNumber > STAGE_COUNT) {
+            throw new IllegalArgumentException("Unsupported stage: " + stageNumber);
         }
+        return stageNumber == 1 ? createFreshman()
+            : createTestStage(stageNumber, semesterName(stageNumber));
+    }
+
+    private static String semesterName(int number) {
+        return "Year " + ((number + 1) / 2) + " - Semester " + ((number - 1) % 2 + 1);
     }
 
     private static StageDefinition createFreshman() {
-        return createTestStage(1, "Freshman");
+        Array<Rectangle> blocks = new Array<>();
+        // A/B: safe walking, one low obstacle, then an 80-unit floor gap.
+        blocks.add(new Rectangle(0, 0, 780, 60));
+        blocks.add(new Rectangle(300, 60, 140, 50));
+        blocks.add(new Rectangle(860, 0, 1040, 60));
+        // B/C: optional item ledges; the clear route stays on the floor.
+        blocks.add(new Rectangle(1000, 130, 160, 20));
+        blocks.add(new Rectangle(1300, 120, 160, 20));
+        blocks.add(new Rectangle(1490, 200, 160, 20));
+        // D: broad steps cross the second 80-unit gap and reach the fixed flag.
+        blocks.add(new Rectangle(1800, 120, 150, 20));
+        blocks.add(new Rectangle(1980, 200, 140, 20));
+        blocks.add(new Rectangle(2140, 280, 100, 20));
+        blocks.add(new Rectangle(2240, 0, 160, 360));
+        Array<GradeItem> items = new Array<>();
+        items.add(new GradeItem(130, 84, 24, 24));
+        items.add(new GradeItem(520, 84, 24, 24));
+        items.add(new GradeItem(1360, 164, 24, 24));
+        items.add(new GradeItem(2310, 384, 24, 24));
+        return new StageDefinition(1, semesterName(1), 2400, 80, 60,
+            new Rectangle(2360, 360, 20, 100), blocks, items);
     }
 
-    private static StageDefinition createSophomore() {
-        return createTestStage(2, "Sophomore");
-    }
-
-    private static StageDefinition createJunior() {
-        return createTestStage(3, "Junior");
-    }
-
-    private static StageDefinition createSenior() {
-        return createTestStage(4, "Senior");
-    }
-
-    // 기존 완성 맵을 보존합니다. 향후 학년별 생성 함수에서 독자적인 배치로 교체합니다.
-    // 호출할 때마다 새 데이터와 객체를 생성하므로 학년 간 상태를 공유하지 않습니다.
+    // Preserve the original test layout; every call builds independent objects.
     private static StageDefinition createTestStage(int stageNumber, String stageName) {
         Array<Rectangle> blocks = new Array<>();
         // 기존 실습 맵의 좌표와 크기를 그대로 사용합니다.

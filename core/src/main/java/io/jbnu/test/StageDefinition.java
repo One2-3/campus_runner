@@ -68,6 +68,14 @@ public final class StageDefinition {
         return stageNumber;
     }
 
+    public int getYear() {
+        return (stageNumber + 1) / 2;
+    }
+
+    public int getSemester() {
+        return (stageNumber - 1) % 2 + 1;
+    }
+
     public String getStageName() {
         return stageName;
     }
