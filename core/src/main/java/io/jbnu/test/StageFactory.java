@@ -16,6 +16,7 @@ public final class StageFactory {
         }
         return stageNumber == 1 ? createFreshman()
             : stageNumber == 2 ? createFreshmanSemester2()
+            : stageNumber == 3 ? createSophomoreSemester1()
             : createTestStage(stageNumber, semesterName(stageNumber));
     }
 
@@ -69,6 +70,28 @@ public final class StageFactory {
         items.add(new GradeItem(2490, 344, 24, 24));
         return new StageDefinition(2, semesterName(2), 2600, 80, 60,
             new Rectangle(2540, 320, 20, 100), blocks, items, platforms);
+    }
+
+    // A low campus route rises by elevator to an elevated horizontal crossing.
+    private static StageDefinition createSophomoreSemester1() {
+        Array<Rectangle> blocks = new Array<>();
+        blocks.add(new Rectangle(0, 0, 1040, 60));
+        blocks.add(new Rectangle(280, 130, 180, 20));
+        blocks.add(new Rectangle(600, 90, 180, 20));
+        blocks.add(new Rectangle(1320, 340, 400, 20));
+        blocks.add(new Rectangle(2280, 0, 520, 360));
+        Array<MovingPlatform> platforms = new Array<>();
+        platforms.add(new MovingPlatform(1100, 80, 1100, 340, 160, 20, 65));
+        platforms.add(new MovingPlatform(1760, 340, 2080, 340, 160, 20, 90));
+        Array<GradeItem> items = new Array<>();
+        items.add(new GradeItem(160, 84, 24, 24));
+        items.add(new GradeItem(350, 174, 24, 24));
+        items.add(new GradeItem(660, 134, 24, 24));
+        items.add(new GradeItem(1160, 264, 24, 24));
+        items.add(new GradeItem(1980, 384, 24, 24));
+        items.add(new GradeItem(2660, 384, 24, 24));
+        return new StageDefinition(3, semesterName(3), 2800, 80, 60,
+            new Rectangle(2740, 360, 20, 100), blocks, items, platforms);
     }
 
     // Preserve the original test layout; every call builds independent objects.

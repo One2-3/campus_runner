@@ -52,6 +52,7 @@ public final class Semester2LevelVerification {
                 tick(game);
                 check(number(game, "currentStageNumber") == 3 && number(game, "stageScore") == 0,
                     "Stage 3 follows Stage 2");
+                SophomoreLevelVerification.verifyConnected(game, fps);
                 route(newGame(2), true, false);
                 verifyFailureAndRetry(fps);
                 verifyBoardingWindows(fps);
