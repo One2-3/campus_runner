@@ -1,6 +1,6 @@
 package io.jbnu.test;
 
-/** 클리어 시 확정되는 학년별 결과입니다. 저장 후에는 변경하지 않습니다. */
+/** 클리어 시 확정되는 학기별 결과입니다. 저장 후에는 변경하지 않습니다. */
 public final class StageResult {
     private final int stageNumber;
     private final int score;

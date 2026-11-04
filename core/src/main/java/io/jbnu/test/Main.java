@@ -121,10 +121,11 @@ public class Main extends ApplicationAdapter {
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
         float top = uiViewport.getWorldHeight() - 20f;
-        font.draw(batch, "YEAR: " + stage.getStageNumber(), 20f, top);
+        font.draw(batch, "YEAR: " + stage.getYear(), 20f, top);
+        font.draw(batch, "SEMESTER: " + stage.getSemester(), 20f, top - 30f);
         font.draw(batch, "ITEMS: " + collectedItemCount + " / " + gradeItems.size,
-            20f, top - 30f);
-        font.draw(batch, "SCORE: " + stageScore, 20f, top - 60f);
+            20f, top - 60f);
+        font.draw(batch, "SCORE: " + stageScore, 20f, top - 90f);
         batch.end();
     }
 
@@ -140,8 +141,8 @@ public class Main extends ApplicationAdapter {
                 instruction = "Press ESC to Resume";
                 break;
             case STAGE_CLEAR:
-                title = "YEAR " + currentStageNumber + " CLEAR";
-                instruction = "PRESS ENTER FOR NEXT YEAR";
+                title = "YEAR " + stage.getYear() + " - SEMESTER " + stage.getSemester() + " CLEAR";
+                instruction = "PRESS ENTER FOR NEXT SEMESTER";
                 break;
             case GAME_OVER:
                 title = "GAME OVER";
@@ -188,7 +189,7 @@ public class Main extends ApplicationAdapter {
     private void loadStage(int stageNumber) {
         stage = StageFactory.createStage(stageNumber);
         currentStageNumber = stage.getStageNumber();
-        // 이전 학년의 플레이어와 실행용 객체를 모두 교체합니다.
+        // 이전 학기의 플레이어와 실행용 객체를 모두 교체합니다.
         player = new Player(stage.getStartX(), stage.getStartY());
         flag = stage.getFlag();
         blocks = stage.getBlocks();
@@ -282,7 +283,7 @@ public class Main extends ApplicationAdapter {
             gameState = GameState.GAME_OVER;
         }
 
-        // 마지막 학년도 결과를 저장한 뒤 전체 완료로 전환합니다.
+        // 마지막 학기도 결과를 저장한 뒤 전체 완료로 전환합니다.
         else if (player.overlaps(flag)) {
             recordStageResult();
             gameState = currentStageNumber == StageFactory.STAGE_COUNT
