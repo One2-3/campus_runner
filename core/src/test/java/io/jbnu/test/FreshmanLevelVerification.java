@@ -44,6 +44,7 @@ public final class FreshmanLevelVerification {
             }
             verifyItemRetry();
             verifyProgression();
+            Semester2LevelVerification.main(args);
             System.out.println("Freshman verification passed: layout, 4 items / 20 points, "
                 + "30/60/120 fps route, pause, retry, eight semesters and score retention.");
         } finally {
@@ -120,7 +121,7 @@ public final class FreshmanLevelVerification {
             {180, 84}, {330, 148}, {500, 180}, {820, 84}, {940, 164},
             {1140, 228}, {1520, 84}, {1838, 224}, {2140, 318}, {2340, 368}
         };
-        for (int year = 2; year <= 8; year++) {
+        for (int year = 3; year <= 8; year++) {
             StageDefinition stage = StageFactory.createStage(year);
             check(stage.getStageNumber() == year && stage.getYear() == (year + 1) / 2
                 && stage.getSemester() == (year - 1) % 2 + 1, "Semester mapping");
@@ -224,13 +225,13 @@ public final class FreshmanLevelVerification {
         tick(game);
         check((Integer) get(game, "currentStageNumber") == 2 && state(game) == GameState.PLAYING,
             "Enter starts semester 2");
-        check(((Array<?>) get(game, "movingPlatforms")).size == 2
-            && ((Array<?>) get(game, "timedTraps")).size == 2
-            && ((Array<?>) get(game, "enemies")).size == 2, "Semester 2 runtime hazards loaded");
+        check(((Array<?>) get(game, "movingPlatforms")).size == 1
+            && ((Array<?>) get(game, "timedTraps")).size == 0
+            && ((Array<?>) get(game, "enemies")).size == 0, "Semester 2 shuttle loaded without hazards");
         StageResult[] results = (StageResult[]) get(game, "completedResults");
         check(results[0].getScore() == expectedItems * 5 && results[0].getCollectedItemCount() == expectedItems, "Freshman result retained");
         check((Integer) get(game, "stageScore") == 0, "Next semester starts at zero");
-        verifyHudData(game, 0, 10, 0);
+        verifyHudData(game, 0, 5, 0);
         player(game).reset(80, -150);
         tick(game);
         check(state(game) == GameState.GAME_OVER, "Falling still causes game over");
