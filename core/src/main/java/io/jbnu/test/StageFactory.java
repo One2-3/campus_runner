@@ -15,6 +15,7 @@ public final class StageFactory {
             throw new IllegalArgumentException("Unsupported stage: " + stageNumber);
         }
         return stageNumber == 1 ? createFreshman()
+            : stageNumber == 2 ? createFreshmanSemester2()
             : createTestStage(stageNumber, semesterName(stageNumber));
     }
 
@@ -44,6 +45,30 @@ public final class StageFactory {
         items.add(new GradeItem(2310, 384, 24, 24));
         return new StageDefinition(1, semesterName(1), 2400, 80, 60,
             new Rectangle(2360, 360, 20, 100), blocks, items);
+    }
+
+    // First exam period: watch, board and ride before the final fixed steps.
+    private static StageDefinition createFreshmanSemester2() {
+        Array<Rectangle> blocks = new Array<>();
+        blocks.add(new Rectangle(0, 0, 900, 60));
+        blocks.add(new Rectangle(300, 60, 140, 50));
+        blocks.add(new Rectangle(620, 60, 140, 70));
+        // The 580-unit gap requires the shuttle; neither shore is a jump away.
+        blocks.add(new Rectangle(1480, 0, 1120, 60));
+        blocks.add(new Rectangle(1840, 60, 160, 80));
+        blocks.add(new Rectangle(2040, 140, 160, 20));
+        blocks.add(new Rectangle(2240, 220, 160, 20));
+        blocks.add(new Rectangle(2440, 0, 160, 320));
+        Array<MovingPlatform> platforms = new Array<>();
+        platforms.add(new MovingPlatform(940, 100, 1300, 100, 140, 20, 70));
+        Array<GradeItem> items = new Array<>();
+        items.add(new GradeItem(160, 84, 24, 24));
+        items.add(new GradeItem(350, 134, 24, 24));
+        items.add(new GradeItem(1180, 144, 24, 24));
+        items.add(new GradeItem(1710, 84, 24, 24));
+        items.add(new GradeItem(2490, 344, 24, 24));
+        return new StageDefinition(2, semesterName(2), 2600, 80, 60,
+            new Rectangle(2540, 320, 20, 100), blocks, items, platforms);
     }
 
     // Preserve the original test layout; every call builds independent objects.
