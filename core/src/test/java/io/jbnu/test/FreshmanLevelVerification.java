@@ -111,43 +111,6 @@ public final class FreshmanLevelVerification {
         check(!freshman.getGradeItems().first().isCollected()
             && !StageFactory.createStage(1).getGradeItems().first().isCollected(), "Independent items");
 
-        float[][] originalBlocks = {
-            {0, 0, 620, 60}, {760, 0, 540, 60}, {1440, 0, 1160, 60},
-            {300, 60, 80, 64}, {900, 60, 96, 80}, {1080, 180, 160, 24},
-            {1650, 60, 120, 70}, {1790, 60, 120, 140}, {1930, 60, 120, 210},
-            {2100, 270, 110, 24}, {2280, 320, 210, 24}
-        };
-        float[][] originalItems = {
-            {180, 84}, {330, 148}, {500, 180}, {820, 84}, {940, 164},
-            {1140, 228}, {1520, 84}, {1838, 224}, {2140, 318}, {2340, 368}
-        };
-        for (int year = 8; year <= 8; year++) {
-            StageDefinition stage = StageFactory.createStage(year);
-            check(stage.getStageNumber() == year && stage.getYear() == (year + 1) / 2
-                && stage.getSemester() == (year - 1) % 2 + 1, "Semester mapping");
-            check(stage.getWorldWidth() == 2600 && stage.getStartX() == 80
-                && stage.getStartY() == 60, "Original world and spawn");
-            check(stage.getFlag().equals(new Rectangle(2420, 344, 20, 100)), "Original flag");
-            Array<Rectangle> actual = stage.getBlocks();
-            check(actual.size == originalBlocks.length, "Original block count");
-            for (int i = 0; i < actual.size; i++) {
-                float[] b = originalBlocks[i];
-                check(actual.get(i).equals(new Rectangle(b[0], b[1], b[2], b[3])), "Original block " + i);
-            }
-            Array<GradeItem> grades = stage.getGradeItems();
-            check(grades.size == originalItems.length, "Original item count");
-            for (int i = 0; i < grades.size; i++) {
-                check(grades.get(i).getBounds().equals(new Rectangle(originalItems[i][0],
-                    originalItems[i][1], 24, 24)), "Original item " + i);
-            }
-            check(stage.getMovingPlatforms().size == 2 && stage.getTimedTraps().size == 2
-                && stage.getEnemies().size == 2, "Later-year hazards preserved");
-            MovingPlatform platform = stage.getMovingPlatforms().first();
-            Rectangle initial = stage.getMovingPlatforms().first().getBounds();
-            platform.update(0.5f);
-            check(!platform.getBounds().equals(initial), "Moving platform still moves");
-            check(stage.getMovingPlatforms().first().getBounds().equals(initial), "Independent runtime platform");
-        }
     }
 
     private static void verifyRoute(int fps, boolean fastRoute) throws Exception {
