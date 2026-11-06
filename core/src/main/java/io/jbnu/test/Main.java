@@ -29,6 +29,7 @@ public class Main extends ApplicationAdapter {
     private SpriteBatch batch;
     private Texture flagTexture;
     private FixedPlatformRenderer fixedPlatformRenderer;
+    private MovingPlatformRenderer movingPlatformRenderer;
     private Texture gradeItemTexture;
     private PlayerSprites playerSprites;
     private final HitFeedback hitFeedback = new HitFeedback();
@@ -72,6 +73,7 @@ public class Main extends ApplicationAdapter {
         itemRenderer = new ShapeRenderer();
         playerSprites = new PlayerSprites();
         fixedPlatformRenderer = new FixedPlatformRenderer();
+        movingPlatformRenderer = new MovingPlatformRenderer();
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
         gradeItemTexture = new Texture(Gdx.files.internal("pixel/items/grade_a_plus_128.png"));
         gradeItemTexture.setFilter(Texture.TextureFilter.Nearest,Texture.TextureFilter.Nearest);
@@ -132,6 +134,9 @@ public class Main extends ApplicationAdapter {
         for (Rectangle block : blocks) {
             fixedPlatformRenderer.render(batch, block);
         }
+        for (MovingPlatform platform : movingPlatforms) {
+            movingPlatformRenderer.render(batch, platform);
+        }
         batch.draw(flagTexture, flag.x, flag.y, flag.width, flag.height);
         if (!showHurt) playerSprites.render(batch, player, false);
         batch.end();
@@ -139,9 +144,6 @@ public class Main extends ApplicationAdapter {
         // SpriteBatch와 ShapeRenderer는 동시에 begin하지 않습니다.
         itemRenderer.setProjectionMatrix(worldProjection);
         itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        for (MovingPlatform platform : movingPlatforms) {
-            platform.render(itemRenderer);
-        }
         for (TimedTrap trap : timedTraps) {
             trap.render(itemRenderer);
         }
@@ -635,6 +637,7 @@ public class Main extends ApplicationAdapter {
         batch.dispose();
         playerSprites.dispose();
         fixedPlatformRenderer.dispose();
+        movingPlatformRenderer.dispose();
         flagTexture.dispose();
         gradeItemTexture.dispose();
         font.dispose();
