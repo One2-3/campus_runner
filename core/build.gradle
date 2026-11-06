@@ -8,3 +8,11 @@ dependencies {
     implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
   }
 }
+
+// Exercise the real input, collision and stage lifecycle without a window or new dependencies.
+tasks.register('verifyFreshman', JavaExec) {
+  dependsOn testClasses
+  classpath = sourceSets.test.runtimeClasspath
+  mainClass = 'io.jbnu.test.FreshmanLevelVerification'
+}
+check.dependsOn 'verifyFreshman'
