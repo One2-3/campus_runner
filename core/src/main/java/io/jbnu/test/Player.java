@@ -2,8 +2,6 @@ package io.jbnu.test;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
@@ -18,6 +16,7 @@ public class Player {
     private final Rectangle bounds = new Rectangle(0, 0, 32, 44);
     private float velocityX, velocityY;
     private boolean grounded;
+    private boolean facingRight = true;
     private MovingPlatform supportingPlatform;
     private static final float CONTACT_EPSILON = 0.01f;
 
@@ -38,6 +37,7 @@ public class Player {
         velocityX = 0;
         velocityY = 0;
         grounded = false;
+        facingRight = true;
         supportingPlatform = null;
     }
 
@@ -52,6 +52,8 @@ public class Player {
         velocityX = 0;
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) velocityX -= MOVE_SPEED * modifier.getMoveSpeedMultiplier();
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) velocityX += MOVE_SPEED * modifier.getMoveSpeedMultiplier();
+        if (velocityX > 0) facingRight = true;
+        else if (velocityX < 0) facingRight = false;
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && grounded) {
             velocityY = JUMP_SPEED * modifier.getJumpPowerMultiplier();
             grounded = false;
@@ -178,9 +180,9 @@ public class Player {
         return true;
     }
 
-    public void render(SpriteBatch batch, Texture texture) {
-        batch.draw(texture, bounds.x, bounds.y, bounds.width, bounds.height);
-    }
+    public boolean isGrounded() { return grounded; }
+    public boolean isMovingHorizontally() { return velocityX != 0; }
+    public boolean isFacingRight() { return facingRight; }
 
     public float getCenterX() {
         return bounds.x + bounds.width / 2f;

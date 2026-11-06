@@ -214,6 +214,10 @@ public final class LifeSystemVerification {
         ((Array<TimedTrap>)get(game,"timedTraps")).add(TimedTrap.fixedSpikes(80,60,32,44));
         ((Array<PatrollingEnemy>)get(game,"enemies")).add(new PatrollingEnemy(80,60,28,28,70,100,10,true));
         tick(game);
+        check(state(game) == GameState.DYING && number(game,"lives") == 4 && number(game,"semesterDeathCount") == 1,
+            "Simultaneous contacts start one feedback interval before charging a life");
+        int feedbackFrames = (int)Math.ceil(1f/dt)+2;
+        while (state(game) == GameState.DYING && --feedbackFrames > 0) tick(game);
         check(number(game,"lives") == 3 && number(game,"semesterDeathCount") == 2, "Simultaneous enemy and spikes cost one life");
         check(number(game,"totalDeathCount") == 2, "Simultaneous hazards increment cumulative deaths only once");
         verifyRuntimeReset(game);
