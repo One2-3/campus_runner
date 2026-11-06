@@ -28,6 +28,7 @@ public class Main extends ApplicationAdapter {
 
     private SpriteBatch batch;
     private Texture blockTexture, flagTexture;
+    private Texture gradeItemTexture;
     private PlayerSprites playerSprites;
     private final HitFeedback hitFeedback = new HitFeedback();
     private final Matrix4 worldRenderProjection = new Matrix4();
@@ -71,6 +72,8 @@ public class Main extends ApplicationAdapter {
         playerSprites = new PlayerSprites();
         blockTexture = new Texture(Gdx.files.internal("block.png"));
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
+        gradeItemTexture = new Texture(Gdx.files.internal("pixel/items/grade_a_plus_128.png"));
+        gradeItemTexture.setFilter(Texture.TextureFilter.Nearest,Texture.TextureFilter.Nearest);
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
@@ -144,16 +147,16 @@ public class Main extends ApplicationAdapter {
         for (PatrollingEnemy enemy : enemies) {
             enemy.render(itemRenderer);
         }
-        for (GradeItem item : gradeItems) {
-            item.render(itemRenderer);
-        }
         itemRenderer.end();
 
-        if (showHurt) {
-            batch.begin();
-            playerSprites.render(batch, player, true);
-            batch.end();
+        batch.begin();
+        for (GradeItem item : gradeItems) {
+            item.render(batch, gradeItemTexture);
         }
+        if (showHurt) {
+            playerSprites.render(batch, player, true);
+        }
+        batch.end();
 
         renderHud();
         renderStateUi();
@@ -632,6 +635,7 @@ public class Main extends ApplicationAdapter {
         playerSprites.dispose();
         blockTexture.dispose();
         flagTexture.dispose();
+        gradeItemTexture.dispose();
         font.dispose();
         endingFont.dispose();
         itemRenderer.dispose();

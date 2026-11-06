@@ -1,11 +1,14 @@
 package io.jbnu.test;
 
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 
 /** 점수와 수집 상태를 가진 학점 아이템입니다. */
 public final class GradeItem {
     public static final int DEFAULT_SCORE = 5;
+    public static final float DRAW_SIZE = 48f;
+    public static final float DRAW_OFFSET_Y = -10f;
 
     private final Rectangle bounds;
     private final int score;
@@ -44,15 +47,11 @@ public final class GradeItem {
         return new Rectangle(bounds);
     }
 
-    /** 향후 이미지로 바꿀 때 이 렌더링 부분을 교체합니다. */
-    public void render(ShapeRenderer shapes) {
+    /** Shared texture, centered horizontally and shifted down visually; collection bounds stay unchanged. */
+    public void render(SpriteBatch batch, Texture texture) {
         if (collected) return;
         float centerX = bounds.x + bounds.width / 2f;
         float centerY = bounds.y + bounds.height / 2f;
-        shapes.setColor(0.85f, 0.48f, 0.02f, 1f);
-        shapes.triangle(centerX, bounds.y + bounds.height,
-            bounds.x, centerY, bounds.x + bounds.width, centerY);
-        shapes.triangle(centerX, bounds.y,
-            bounds.x, centerY, bounds.x + bounds.width, centerY);
+        batch.draw(texture,centerX-DRAW_SIZE/2f,centerY-DRAW_SIZE/2f+DRAW_OFFSET_Y,DRAW_SIZE,DRAW_SIZE);
     }
 }
