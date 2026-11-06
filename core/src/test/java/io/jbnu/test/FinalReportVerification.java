@@ -16,7 +16,7 @@ public final class FinalReportVerification {
     private static final int[] MAXIMA = {20,25,30,35,40,45,50,60};
     private static final int[] LOSSES = {1,2,3,4,0,1,2,3};
     private static final int[] BONUSES = {20,15,10,5,0};
-    private static boolean enter, escape;
+    private static boolean enter, escape, space;
     private static float dt;
     private static final Method UPDATE = method("update", float.class);
     private static final Method LOAD = method("loadStage", int.class);
@@ -30,7 +30,7 @@ public final class FinalReportVerification {
                     int key = arguments == null ? -1 : (Integer) arguments[0];
                     if (method.getName().equals("isKeyPressed")) return key == Input.Keys.RIGHT;
                     if (method.getName().equals("isKeyJustPressed")) return (key == Input.Keys.ENTER && enter)
-                        || (key == Input.Keys.ESCAPE && escape);
+                        || (key == Input.Keys.ESCAPE && escape) || (key == Input.Keys.SPACE && space);
                     throw new UnsupportedOperationException(method.getName());
                 });
             verifySummarySnapshot();
@@ -63,7 +63,7 @@ public final class FinalReportVerification {
     }
 
     private static void verifyCompletion(boolean partial) throws Exception {
-        enter = escape = false;
+        enter = escape = space = false;
         Main game = new Main();
         OrthographicCamera camera = new OrthographicCamera() {
             @Override public void update() { }
@@ -123,6 +123,17 @@ public final class FinalReportVerification {
         check(again.getFinalScore() == report.getFinalScore() && again.getTotalDeathCount() == expectedDeaths,
             "Stable summary during completion");
         enter = true; tick(game);
+        check(get(game,"gameState") == GameState.GAME_COMPLETE && frozen.equals(runtimeSnapshot(game)),
+            "Report Enter cannot skip ending or erase results");
+        space = enter = true; tick(game);
+        check(get(game,"gameState") == GameState.GRADUATION_ENDING && frozen.equals(runtimeSnapshot(game)),
+            "Simultaneous Space and Enter only opens ending");
+        for (int i = 0; i < 240; i++) tick(game);
+        escape = true; tick(game);
+        check(get(game,"gameState") == GameState.GRADUATION_ENDING && frozen.equals(runtimeSnapshot(game)),
+            "Ending freezes all runtime state too");
+        check(((FinalReport)REPORT.invoke(game)).getTotalDeathCount() == expectedDeaths, "Ending discloses same actual deaths");
+        enter = true; tick(game);
         check(REPORT.invoke(game) == null && get(game,"gameState") == GameState.PLAYING
             && number(game,"currentStageNumber") == 1 && number(game,"lives") == 5
             && number(game,"semesterDeathCount") == 0 && number(game,"totalDeathCount") == 0
@@ -149,7 +160,7 @@ public final class FinalReportVerification {
         return s.toString();
     }
 
-    private static void tick(Main game) throws Exception { UPDATE.invoke(game,dt); enter = escape = false; }
+    private static void tick(Main game) throws Exception { UPDATE.invoke(game,dt); enter = escape = space = false; }
     private static Player player(Main game) throws Exception { return (Player)get(game,"player"); }
     private static Object get(Main game, String name) throws Exception { return field(name).get(game); }
     private static int number(Main game, String name) throws Exception { return (Integer)get(game,name); }

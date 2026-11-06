@@ -31,6 +31,7 @@ public class Main extends ApplicationAdapter {
     private OrthographicCamera uiCamera;
     private FitViewport uiViewport;
     private BitmapFont font;
+    private BitmapFont endingFont;
     private GlyphLayout textLayout;
     private ShapeRenderer itemRenderer;
 
@@ -73,6 +74,7 @@ public class Main extends ApplicationAdapter {
         font = new BitmapFont();
         font.setColor(Color.BLACK);
         font.getData().setScale(2f);
+        endingFont = new BitmapFont(Gdx.files.internal("fonts/ending-ko.fnt"));
         textLayout = new GlyphLayout();
 
         startNewGame();
@@ -92,6 +94,10 @@ public class Main extends ApplicationAdapter {
 
         if (gameState == GameState.GAME_COMPLETE) {
             renderFinalReport(getFinalReport());
+            return;
+        }
+        if (gameState == GameState.GRADUATION_ENDING) {
+            renderGraduationEnding(getFinalReport());
             return;
         }
 
@@ -206,7 +212,8 @@ public class Main extends ApplicationAdapter {
     }
 
     private FinalReport getFinalReport() {
-        return gameState == GameState.GAME_COMPLETE ? new FinalReport(completedResults, totalDeathCount) : null;
+        return gameState == GameState.GAME_COMPLETE || gameState == GameState.GRADUATION_ENDING
+            ? new FinalReport(completedResults, totalDeathCount) : null;
     }
 
     private void renderFinalReport(FinalReport report) {
@@ -256,10 +263,56 @@ public class Main extends ApplicationAdapter {
         font.draw(batch, String.format(Locale.ROOT, "GPA: %.2f / 4.50", report.getGpa()), 490f, 186f);
         font.getData().setScale(1.1f);
         font.draw(batch, String.format(Locale.ROOT, "SCORE RATE: %.2f%%", report.getScoreRate()), 490f, 150f);
+        drawReportCentered("PRESS SPACE TO VIEW GRADUATION RESULT", 60f);
+        batch.end();
+        font.getData().setScale(2f);
+        font.setColor(Color.BLACK);
+    }
+
+    private void renderGraduationEnding(FinalReport report) {
+        GraduationEnding ending = report.getEnding();
+        int rgb = ending.getColorRgb();
+        Color accent = new Color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, 1f);
+        uiViewport.apply();
+        itemRenderer.setProjectionMatrix(uiCamera.combined);
+        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        itemRenderer.setColor(0.94f, 0.96f, 0.98f, 1f);
+        itemRenderer.rect(32f, 96f, 736f, 426f);
+        itemRenderer.setColor(accent);
+        itemRenderer.rect(32f, 514f, 736f, 8f);
+        itemRenderer.end();
+
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        font.setColor(0.1f, 0.2f, 0.3f, 1f);
+        font.getData().setScale(1.2f);
+        drawReportCentered("CAMPUS RUNNER", 570f);
+        font.getData().setScale(2f);
+        drawReportCentered("GRADUATION RESULT", 490f);
+        endingFont.setColor(accent);
+        endingFont.getData().setScale(1.5f);
+        drawEndingCentered(ending.getTitle(), 432f);
+        font.setColor(0.1f, 0.2f, 0.3f, 1f);
+        font.getData().setScale(1.4f);
+        drawReportCentered(String.format(Locale.ROOT, "GPA: %.2f / 4.50", report.getGpa()), 366f);
+        drawReportCentered("FINAL SCORE: " + report.getFinalScore() + " / " + FinalReport.MAX_FINAL_SCORE, 328f);
+        drawReportCentered("TOTAL DEATHS: " + report.getTotalDeathCount(), 290f);
+        endingFont.setColor(0.1f, 0.2f, 0.3f, 1f);
+        endingFont.getData().setScale(0.85f);
+        drawEndingCentered(ending.getMessage(), 236f);
+        drawEndingCentered(ending.getDetail(), 198f);
+        endingFont.getData().setScale(0.65f);
+        drawEndingCentered(GraduationEnding.PRECISION_NOTE, 142f);
+        font.getData().setScale(1.1f);
         drawReportCentered("PRESS ENTER TO RESTART FROM YEAR 1, SEMESTER 1", 60f);
         batch.end();
         font.getData().setScale(2f);
         font.setColor(Color.BLACK);
+    }
+
+    private void drawEndingCentered(String text, float y) {
+        textLayout.setText(endingFont, text);
+        endingFont.draw(batch, textLayout, (uiViewport.getWorldWidth() - textLayout.width) / 2f, y);
     }
 
     private void drawReportRight(String text, float right, float y) {
@@ -327,6 +380,11 @@ public class Main extends ApplicationAdapter {
 
 
     private void update(float dt) {
+        // Consume report input separately, so simultaneous Space/Enter cannot also restart the game.
+        if (gameState == GameState.GAME_COMPLETE) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) gameState = GameState.GRADUATION_ENDING;
+            return;
+        }
         // 상태 입력은 물리 갱신 전에 처리하여 정지 상태에서도 동작합니다.
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             switch (gameState) {
@@ -336,7 +394,7 @@ public class Main extends ApplicationAdapter {
                 case STAGE_CLEAR:
                     loadStage(currentStageNumber + 1);
                     return;
-                case GAME_COMPLETE:
+                case GRADUATION_ENDING:
                     startNewGame();
                     return;
                 default:
@@ -429,6 +487,7 @@ public class Main extends ApplicationAdapter {
         blockTexture.dispose();
         flagTexture.dispose();
         font.dispose();
+        endingFont.dispose();
         itemRenderer.dispose();
     }
 }

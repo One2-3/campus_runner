@@ -25,7 +25,7 @@ flowchart TD
 
 한 프레임에 적과 가시가 동시에 닿아도 사망 처리는 한 번만 실행한다.
 실패가 깃발보다 우선하며, 사망 처리를 마친 프레임에는 클리어 판정이나 새 런타임 물리 갱신을 하지 않는다.
-GAME_OVER·PAUSED·STAGE_CLEAR·GAME_COMPLETE에서는 추가 피해를 처리하지 않는다.
+GAME_OVER·PAUSED·STAGE_CLEAR·GAME_COMPLETE·GRADUATION_ENDING에서는 추가 피해를 처리하지 않는다.
 
 ## 학기 사망과 전체 누적 사망
 
@@ -45,8 +45,8 @@ GAME_OVER·PAUSED·STAGE_CLEAR·GAME_COMPLETE에서는 추가 피해를 처리�
 | Stage 8 클리어 및 GAME_COMPLETE 대기 | 유지 | 유지 |
 
 누적 카운터는 `loadStage()`와 런타임 복원에서 초기화하지 않는다.
-초기화는 `startNewGame()`에서만 수행한다. 기존 GAME_COMPLETE 화면에서도
-Enter는 새 게임을 시작하므로 이때 모든 결과와 누적 사망을 함께 초기화한다.
+초기화는 `startNewGame()`에서만 수행한다. GAME_COMPLETE 성적표에서 Space로 엔딩을 확인한 뒤
+엔딩의 Enter로 새 게임을 시작할 때 모든 결과와 누적 사망을 함께 초기화한다.
 완료 상태에 머무는 동안에는 값을 보존하며 최종 성적표에서 공개한다.
 누적 사망은 점수·생존 보너스 계산에 사용하지 않는다.
 
@@ -106,7 +106,8 @@ totalScore = sum(completedSemesterFinalScores)
 학기 클리어 후 Enter로 다음 학기에 진입하면 새 목숨 5개·새 사망 횟수 0으로 시작한다.
 이전 학기의 기록은 그 상태로 유지한다.
 Stage 8을 클리어하면 결과를 저장하고 기존 GAME_COMPLETE로 전환한다. Stage 9는 생성하지 않는다.
-GAME_COMPLETE 화면의 Enter는 기존 새 게임 동작이며, 모든 결과를 지우고 Stage 1을 시작한다.
+GAME_COMPLETE 성적표에서는 Space로 GRADUATION_ENDING으로 이동한다.
+엔딩 화면의 Enter는 모든 결과를 지우고 Stage 1을 시작한다. 성적표의 Enter는 무시한다.
 
 ### StageResult 조회
 
@@ -162,7 +163,8 @@ RESTART FROM YEAR 1, SEMESTER 1
 PRESS ENTER TO RESTART
 ```
 
-최종 성적표와 게임용 GPA는 별도 STEP 7-2에서 추가했다. 엔딩 분기는 구현하지 않는다.
+최종 성적표와 게임용 GPA는 STEP 7-2, GPA별 엔딩 화면은 STEP 7-3에서 추가했다.
+엔딩 규칙은 [GRADUATION_ENDINGS.md](GRADUATION_ENDINGS.md)를 따른다.
 
 ## 변경 파일
 

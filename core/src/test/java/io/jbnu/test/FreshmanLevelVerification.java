@@ -47,6 +47,7 @@ public final class FreshmanLevelVerification {
             Semester2LevelVerification.main(args);
             LifeSystemVerification.main(args);
             FinalReportVerification.main(args);
+            GraduationEndingVerification.main(args);
             System.out.println("Freshman verification passed: layout, 4 items / 20 points, "
                 + "30/60/120 fps route, pause, retry, eight semesters and score retention.");
         } finally {
@@ -363,6 +364,10 @@ public final class FreshmanLevelVerification {
             Method totalMethod = Main.class.getDeclaredMethod("getTotalScore");
             totalMethod.setAccessible(true);
             check((Integer) totalMethod.invoke(game) == LifeVerificationSupport.expectedTotal(game,total), "Total includes all completed semesters");
+            if (number == 8) {
+                jump = true; tick(game);
+                check(state(game) == GameState.GRADUATION_ENDING, "Space opens graduation ending after report");
+            }
             enter = true;
             tick(game);
             check((Integer) get(game, "currentStageNumber") == (number == 8 ? 1 : number + 1),

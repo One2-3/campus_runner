@@ -78,7 +78,12 @@ public final class LifeSystemVerification {
                         && number(game,"semesterDeathCount") == 0 && results(game)[stage-1] == result,
                         "Normal advancement restores five lives and retains previous result");
                     check(number(game,"totalDeathCount") == deaths, "Advancement only resets semester deaths");
-                } else verifyFullNewGame(game);
+                } else {
+                    check(state(game) == GameState.GAME_COMPLETE, "Enter cannot skip report");
+                    jump = true; tick(game);
+                    check(state(game) == GameState.GRADUATION_ENDING, "Space opens ending before restart");
+                    enter = true; tick(game); verifyFullNewGame(game);
+                }
             }
         }
     }
@@ -183,6 +188,11 @@ public final class LifeSystemVerification {
         check(expectedDeaths == 16 && number(game,"totalDeathCount") == 16 && expectedScore == 385
             && total(game) == 385 && state(game) == GameState.GAME_COMPLETE && number(game,"currentStageNumber") == 8,
             "GAME_COMPLETE retains all sixteen deaths and results without Stage 9");
+        enter = true; tick(game);
+        check(state(game) == GameState.GAME_COMPLETE, "Report Enter cannot discard completed results");
+        jump = true; tick(game);
+        check(state(game) == GameState.GRADUATION_ENDING && number(game,"totalDeathCount") == 16,
+            "Ending retains cumulative deaths");
         enter = true; tick(game); verifyFullNewGame(game);
     }
 
