@@ -21,6 +21,7 @@ public final class StageFactory {
             : stageNumber == 5 ? createJuniorSemester1()
             : stageNumber == 6 ? createJuniorSemester2()
             : stageNumber == 7 ? createSeniorSemester1()
+            : stageNumber == 8 ? createSeniorSemester2()
             : createTestStage(stageNumber, semesterName(stageNumber));
     }
 
@@ -227,6 +228,65 @@ public final class StageFactory {
         items.add(new GradeItem(3710, 404, 24, 24));
         return new StageDefinition(7, semesterName(7), 3800, 80, 60,
             new Rectangle(3760, 380, 20, 100), blocks, items, platforms, traps, enemies);
+    }
+
+    private static StageDefinition createSeniorSemester2() {
+        Array<Rectangle> blocks = new Array<>();
+        // A: descending terraces, with hazards on the far ends rather than blind landings.
+        blocks.add(new Rectangle(0, 340, 220, 20));
+        blocks.add(new Rectangle(280, 260, 180, 20));
+        blocks.add(new Rectangle(540, 180, 150, 20));
+        blocks.add(new Rectangle(760, 100, 240, 20));
+        // B: a real upper/lower fork, connected at both ends for item recovery.
+        blocks.add(new Rectangle(1000, 100, 160, 20));
+        blocks.add(new Rectangle(1200, 200, 100, 20));
+        blocks.add(new Rectangle(1370, 260, 90, 20));
+        blocks.add(new Rectangle(1530, 220, 100, 20));
+        blocks.add(new Rectangle(1200, 40, 480, 20));
+        blocks.add(new Rectangle(1700, 100, 260, 20));
+        // C: rise in a compact tower, ride upward, jump left, then climb right.
+        blocks.add(new Rectangle(2000, 180, 100, 20));
+        blocks.add(new Rectangle(2010, 340, 100, 20));
+        blocks.add(new Rectangle(2240, 420, 100, 20));
+        blocks.add(new Rectangle(2370, 380, 140, 20));
+        // D: uneven broken bridge islands; no continuous safety floor underneath.
+        blocks.add(new Rectangle(2600, 300, 160, 20));
+        blocks.add(new Rectangle(2820, 340, 140, 20));
+        blocks.add(new Rectangle(3060, 260, 160, 20));
+        blocks.add(new Rectangle(3280, 320, 90, 20));
+        blocks.add(new Rectangle(3450, 240, 180, 20));
+        // E: graduation staircase and a moving final approach.
+        blocks.add(new Rectangle(3740, 300, 140, 20));
+        blocks.add(new Rectangle(3930, 380, 100, 20));
+        blocks.add(new Rectangle(4300, 460, 200, 20));
+        Array<MovingPlatform> platforms = new Array<>();
+        platforms.add(new MovingPlatform(2190, 120, 2190, 320, 120, 20, 65));
+        platforms.add(new MovingPlatform(4060, 400, 4140, 400, 120, 20, 65));
+        Array<TimedTrap> traps = new Array<>();
+        traps.add(TimedTrap.fixedSpikes(400, 280, 40, 24));
+        traps.add(TimedTrap.fixedSpikes(900, 120, 40, 24));
+        traps.add(TimedTrap.fixedSpikes(3170, 280, 40, 24));
+        traps.add(TimedTrap.cyclingSpikes(1530, 60, 96, 48, 1.3, 0.7, 1.8, 0));
+        traps.add(TimedTrap.cyclingSpikes(2890, 360, 56, 48, 1.1, 0.7, 1.6, 1.0));
+        Array<PatrollingEnemy> enemies = new Array<>();
+        enemies.add(new PatrollingEnemy(1370, 60, 28, 32, 1320, 1420, 85, true));
+        enemies.add(new PatrollingEnemy(2690, 320, 28, 32, 2670, 2700, 90, false));
+        enemies.add(new PatrollingEnemy(3550, 260, 30, 32, 3520, 3580, 95, false));
+        Array<GradeItem> items = new Array<>();
+        items.add(new GradeItem(140, 384, 24, 24));
+        items.add(new GradeItem(570, 224, 24, 24));
+        items.add(new GradeItem(1230, 244, 24, 24));
+        items.add(new GradeItem(1390, 304, 24, 24));
+        items.add(new GradeItem(1260, 84, 24, 24));
+        items.add(new GradeItem(1640, 84, 24, 24));
+        items.add(new GradeItem(2080, 224, 24, 24));
+        items.add(new GradeItem(2280, 464, 24, 24));
+        items.add(new GradeItem(2740, 344, 24, 24));
+        items.add(new GradeItem(3290, 364, 24, 24));
+        items.add(new GradeItem(3800, 344, 24, 24));
+        items.add(new GradeItem(4380, 504, 24, 24));
+        return new StageDefinition(8, semesterName(8), 4500, 80, 360,
+            new Rectangle(4440, 480, 20, 100), blocks, items, platforms, traps, enemies);
     }
 
     // Preserve the original test layout; every call builds independent objects.

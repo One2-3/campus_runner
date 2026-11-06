@@ -42,12 +42,13 @@ public final class SeniorSemester1Verification {
             route(game,false,true);
             enter = true; tick(game);
             check(number(game,"currentStageNumber") == 8 && state(game) == GameState.PLAYING
-                && number(game,"stageScore") == 0 && ((Array<?>) get(game,"gradeItems")).size == 10,
-                "Stage 8 original runtime loads");
+                && number(game,"stageScore") == 0 && ((Array<?>) get(game,"gradeItems")).size == 12,
+                "Stage 8 final map loads twelve items");
             for (int i = 0; i < 6; i++) check(results(game)[i] == prior[i], "Stage 8 preserves result " + i);
             check(results(game)[6].getScore() == 50, "Stage 7 result retained");
             Method total = Main.class.getDeclaredMethod("getTotalScore"); total.setAccessible(true);
             check((Integer) total.invoke(game) == 245, "Seven-semester total 245");
+            SeniorSemester2Verification.verifyConnected(game, fps);
             route(newGame(),true,false);
             verifyContacts();
             System.out.printf("%d fps: Stage 7 passed: platform transfer, narrow landings, 4 enemy/5 fixed/3 timed hits, "
