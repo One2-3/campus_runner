@@ -1,6 +1,5 @@
 package io.jbnu.test;
 
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 
 /** minX/maxX는 몸체 왼쪽 좌표의 경계입니다. 몸 전체가 지지면 위에 있도록 배치합니다. */
@@ -65,17 +64,4 @@ public final class PatrollingEnemy {
         return player.overlaps(bounds);
     }
 
-    /** 이미지 교체 시 이 부분만 바꾸고 충돌 영역은 그대로 유지할 수 있습니다. */
-    public void render(ShapeRenderer shapes) {
-        shapes.setColor(0.12f, 0.50f, 0.18f, 1f);
-        shapes.rect(bounds.x, bounds.y, bounds.width, bounds.height);
-        float eyeWidth = bounds.width * 0.22f;
-        float eyeX = bounds.x + bounds.width * (movingRight ? 0.65f : 0.13f);
-        float eyeY = bounds.y + bounds.height * 0.58f;
-        shapes.setColor(1f, 1f, 1f, 1f);
-        shapes.rect(eyeX, eyeY, eyeWidth, bounds.height * 0.26f);
-        shapes.setColor(0.02f, 0.08f, 0.02f, 1f);
-        shapes.rect(eyeX + eyeWidth * (movingRight ? 0.55f : 0.05f),
-            eyeY + bounds.height * 0.04f, eyeWidth * 0.4f, bounds.height * 0.16f);
-    }
 }
