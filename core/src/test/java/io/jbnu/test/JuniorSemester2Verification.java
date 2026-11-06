@@ -45,11 +45,12 @@ public final class JuniorSemester2Verification {
             enter = true; tick(game);
             check(number(game, "currentStageNumber") == 7 && state(game) == GameState.PLAYING
                 && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 10,
-                "Stage 7 original data loads");
+                "Stage 7 loads ten items");
             for (int i = 0; i < 5; i++) check(results(game)[i] == prior[i], "Stage 7 preserves result " + i);
             check(results(game)[5].getScore() == 45, "Stage 6 score retained");
             Method total = Main.class.getDeclaredMethod("getTotalScore"); total.setAccessible(true);
             check((Integer) total.invoke(game) == 195, "Six-semester total 195");
+            SeniorSemester1Verification.verifyConnected(game, fps);
             route(newGame(), true, false);
             verifyContacts();
             System.out.printf("%d fps: Stage 6 passed: 3 enemy hits/evasions, 3 fixed hits, 2 timed hits/SAFE crossings, "
