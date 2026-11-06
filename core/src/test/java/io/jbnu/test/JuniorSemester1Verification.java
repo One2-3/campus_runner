@@ -45,12 +45,13 @@ public final class JuniorSemester1Verification {
             route(game, false, true);
             enter = true; tick(game);
             check(number(game, "currentStageNumber") == 6 && state(game) == GameState.PLAYING
-                && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 10,
-                "Stage 6 unchanged test map loads");
+                && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 9,
+                "Stage 6 loads nine items");
             for (int i = 0; i < 4; i++) check(results(game)[i] == prior[i], "Stage 6 retains result " + i);
             check(results(game)[4].getScore() == 40, "Stage 5 recorded score retained");
             Method total = Main.class.getDeclaredMethod("getTotalScore"); total.setAccessible(true);
             check((Integer) total.invoke(game) == 150, "Five-semester total 150");
+            JuniorSemester2Verification.verifyConnected(game, fps);
             route(newGame(), true, false);
             verifyContacts();
             System.out.printf("%d fps: Stage 5 passed: two patrols/hits/jump evasion, shuttle landing timing, "
