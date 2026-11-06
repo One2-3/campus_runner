@@ -46,6 +46,7 @@ public final class SophomoreSemester2Verification {
             for (int i = 0; i < 3; i++) check(results(game)[i] == prior[i], "Retry keeps semester " + i);
             route(game, false, true);
             enter = true; tick(game);
+            VacationVerificationSupport.finishIfPending(game, false);
             check(number(game, "currentStageNumber") == 5 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game)
                 && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 8,
                 "Stage 5 loads eight items and fresh score");
@@ -188,7 +189,7 @@ public final class SophomoreSemester2Verification {
         check(support(game) == null, "Elevator dismount at elevated final platform");
         move(game, 2940);
         int count = partial ? 6 : 7;
-        check(state(game) == GameState.STAGE_CLEAR && number(game, "collectedItemCount") == count,
+        check(state(game) == GameState.VACATION_EVENT && number(game, "collectedItemCount") == count,
             "Full/partial clear");
         check(seenHud == (1 << (count + 1)) - 1, "Every HUD count 0 through " + count);
         check(results(game)[3].getItemScore() == count * 5 && results(game)[3].getCollectedItemCount() == count,

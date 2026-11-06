@@ -43,6 +43,7 @@ public final class JuniorSemester2Verification {
             for (int i = 0; i < 5; i++) check(results(game)[i] == prior[i], "Retry preserves prior result " + i);
             route(game, false, true);
             enter = true; tick(game);
+            VacationVerificationSupport.finishIfPending(game, false);
             check(number(game, "currentStageNumber") == 7 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game)
                 && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 10,
                 "Stage 7 loads ten items");
@@ -205,7 +206,7 @@ public final class JuniorSemester2Verification {
         reachThird(game,partial,exercise); passThird(game);
         move(game,2940); leap(game,3090,320); leap(game,3240,400); move(game,3340);
         int count = partial ? 8 : 9;
-        check(state(game) == GameState.STAGE_CLEAR && number(game,"collectedItemCount") == count
+        check(state(game) == GameState.VACATION_EVENT && number(game,"collectedItemCount") == count
             && results(game)[5].getItemScore() == count * 5 && results(game)[5].getCollectedItemCount() == count,
             "Full/partial clear and record; actual count=" + number(game,"collectedItemCount"));
         check(seenHud == (1 << (count + 1)) - 1, "Every HUD count 0 through " + count);
