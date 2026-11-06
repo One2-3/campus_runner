@@ -27,7 +27,8 @@ public class Main extends ApplicationAdapter {
     public static final int MAX_LIVES = 5;
 
     private SpriteBatch batch;
-    private Texture blockTexture, flagTexture;
+    private Texture flagTexture;
+    private FixedPlatformRenderer fixedPlatformRenderer;
     private Texture gradeItemTexture;
     private PlayerSprites playerSprites;
     private final HitFeedback hitFeedback = new HitFeedback();
@@ -70,7 +71,7 @@ public class Main extends ApplicationAdapter {
         batch = new SpriteBatch();
         itemRenderer = new ShapeRenderer();
         playerSprites = new PlayerSprites();
-        blockTexture = new Texture(Gdx.files.internal("block.png"));
+        fixedPlatformRenderer = new FixedPlatformRenderer();
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
         gradeItemTexture = new Texture(Gdx.files.internal("pixel/items/grade_a_plus_128.png"));
         gradeItemTexture.setFilter(Texture.TextureFilter.Nearest,Texture.TextureFilter.Nearest);
@@ -129,7 +130,7 @@ public class Main extends ApplicationAdapter {
         batch.setProjectionMatrix(worldProjection);
         batch.begin();
         for (Rectangle block : blocks) {
-            batch.draw(blockTexture, block.x, block.y, block.width, block.height);
+            fixedPlatformRenderer.render(batch, block);
         }
         batch.draw(flagTexture, flag.x, flag.y, flag.width, flag.height);
         if (!showHurt) playerSprites.render(batch, player, false);
@@ -633,7 +634,7 @@ public class Main extends ApplicationAdapter {
     public void dispose() {
         batch.dispose();
         playerSprites.dispose();
-        blockTexture.dispose();
+        fixedPlatformRenderer.dispose();
         flagTexture.dispose();
         gradeItemTexture.dispose();
         font.dispose();
