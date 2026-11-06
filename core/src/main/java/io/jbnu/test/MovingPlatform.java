@@ -1,6 +1,5 @@
 package io.jbnu.test;
 
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 
 /** 두 지점 사이를 일정 속도로 왕복합니다. 위치는 경로상의 거리로 계산합니다. */
@@ -70,9 +69,6 @@ public final class MovingPlatform {
     public float getDeltaY() { return deltaY; }
     public boolean isMovingForward() { return phase < length; }
 
-    public void render(ShapeRenderer shapes) {
-        if (startY == endY) shapes.setColor(0.05f, 0.60f, 0.65f, 1f);
-        else shapes.setColor(0.55f, 0.25f, 0.80f, 1f);
-        shapes.rect(bounds.x, bounds.y, bounds.width, bounds.height);
-    }
+    /** Selects artwork from the immutable path, including while stationary or reversing. */
+    public boolean isHorizontal() { return startY == endY; }
 }
