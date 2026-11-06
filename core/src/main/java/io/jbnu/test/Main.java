@@ -21,6 +21,7 @@ import java.util.Arrays;
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
+    public static final int MAX_LIVES = 5;
 
     private SpriteBatch batch;
     private Texture playerTexture, blockTexture, flagTexture;
@@ -42,6 +43,10 @@ public class Main extends ApplicationAdapter {
     private Array<PatrollingEnemy> enemies;
     private int collectedItemCount;
     private int stageScore;
+    private int lives = MAX_LIVES;
+    private int semesterDeathCount;
+    private int totalDeathCount;
+    private final int[] semesterDeaths = new int[StageFactory.STAGE_COUNT];
     private int currentStageNumber = 1;
     private final StageResult[] completedResults = new StageResult[StageFactory.STAGE_COUNT];
     private GameState gameState = GameState.PLAYING;
@@ -126,7 +131,20 @@ public class Main extends ApplicationAdapter {
         font.draw(batch, "ITEMS: " + collectedItemCount + " / " + gradeItems.size,
             20f, top - 60f);
         font.draw(batch, "SCORE: " + stageScore, 20f, top - 90f);
+        font.draw(batch, "LIVES: " + lives + " / " + MAX_LIVES, 520f, top);
         batch.end();
+
+        itemRenderer.setProjectionMatrix(uiCamera.combined);
+        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        for (int i = 0; i < MAX_LIVES; i++) {
+            float x = 532f + i * 36f;
+            float y = top - 50f;
+            itemRenderer.setColor(i < lives ? Color.RED : Color.LIGHT_GRAY);
+            itemRenderer.circle(x - 6f, y + 12f, 6f, 16);
+            itemRenderer.circle(x + 6f, y + 12f, 6f, 16);
+            itemRenderer.triangle(x - 12f, y + 12f, x + 12f, y + 12f, x, y);
+        }
+        itemRenderer.end();
     }
 
     private void renderStateUi() {
@@ -135,6 +153,7 @@ public class Main extends ApplicationAdapter {
         String title;
         String instruction;
         String detail = null;
+        String restartNotice = null;
         switch (gameState) {
             case PAUSED:
                 title = "PAUSED";
@@ -146,7 +165,9 @@ public class Main extends ApplicationAdapter {
                 break;
             case GAME_OVER:
                 title = "GAME OVER";
-                instruction = "PRESS ENTER TO RETRY";
+                detail = "ALL LIVES LOST";
+                restartNotice = "RESTART FROM YEAR 1, SEMESTER 1";
+                instruction = "PRESS ENTER TO RESTART";
                 break;
             case GAME_COMPLETE:
                 title = "GRADUATION COMPLETE";
@@ -170,23 +191,38 @@ public class Main extends ApplicationAdapter {
                 (uiViewport.getWorldWidth() - textLayout.width) / 2f,
                 uiViewport.getWorldHeight() / 2f - 40f);
         }
+        if (restartNotice != null) {
+            textLayout.setText(font, restartNotice);
+            font.draw(batch, textLayout,
+                (uiViewport.getWorldWidth() - textLayout.width) / 2f,
+                uiViewport.getWorldHeight() / 2f - 80f);
+        }
         textLayout.setText(font, instruction);
         font.draw(batch, textLayout,
             (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-            uiViewport.getWorldHeight() / 2f - (detail == null ? 40f : 80f));
+            uiViewport.getWorldHeight() / 2f - (restartNotice != null ? 120f : detail == null ? 40f : 80f));
         batch.end();
     }
 
     private void restartStage() {
-        loadStage(currentStageNumber);
+        resetStageRuntime(currentStageNumber);
     }
 
     private void startNewGame() {
         Arrays.fill(completedResults, null);
+        Arrays.fill(semesterDeaths, 0);
+        totalDeathCount = 0;
         loadStage(1);
     }
 
     private void loadStage(int stageNumber) {
+        lives = MAX_LIVES;
+        semesterDeathCount = 0;
+        semesterDeaths[stageNumber - 1] = 0;
+        resetStageRuntime(stageNumber);
+    }
+
+    private void resetStageRuntime(int stageNumber) {
         stage = StageFactory.createStage(stageNumber);
         currentStageNumber = stage.getStageNumber();
         // 이전 학기의 플레이어와 실행용 객체를 모두 교체합니다.
@@ -208,14 +244,15 @@ public class Main extends ApplicationAdapter {
     private void recordStageResult() {
         int index = currentStageNumber - 1;
         if (completedResults[index] == null) {
-            completedResults[index] = new StageResult(currentStageNumber, stageScore, collectedItemCount);
+            completedResults[index] = new StageResult(currentStageNumber, stageScore, collectedItemCount,
+                semesterDeathCount);
         }
     }
 
     private int getTotalScore() {
         int total = 0;
         for (StageResult result : completedResults) {
-            if (result != null) total += result.getScore();
+            if (result != null) total += result.getFinalScore();
         }
         return total;
     }
@@ -226,7 +263,7 @@ public class Main extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             switch (gameState) {
                 case GAME_OVER:
-                    restartStage();
+                    startNewGame();
                     return;
                 case STAGE_CLEAR:
                     loadStage(currentStageNumber + 1);
@@ -280,7 +317,13 @@ public class Main extends ApplicationAdapter {
             }
         }
         if (player.getY() < -100 || trapHit || enemyHit) {
-            gameState = GameState.GAME_OVER;
+            semesterDeathCount++;
+            totalDeathCount++;
+            semesterDeaths[currentStageNumber - 1] = semesterDeathCount;
+            lives--;
+            if (lives == 0) gameState = GameState.GAME_OVER;
+            else restartStage();
+            return; // One death per frame; never clear or update the freshly reset runtime here.
         }
 
         // 마지막 학기도 결과를 저장한 뒤 전체 완료로 전환합니다.

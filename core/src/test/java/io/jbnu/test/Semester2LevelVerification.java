@@ -42,11 +42,11 @@ public final class Semester2LevelVerification {
                 enter = true;
                 tick(game);
                 check(number(game, "currentStageNumber") == 2, "Enter loads Stage 2");
-                check(results(game)[0].getScore() == 20, "Stage 1 score retained");
+                check(results(game)[0].getItemScore() == 20, "Stage 1 score retained");
                 fallAndRetry(game, false);
-                check(results(game)[0].getScore() == 20, "Stage 2 retry preserves Stage 1 result");
+                check(results(game)[0].getItemScore() == 20, "Stage 2 retry preserves Stage 1 result");
                 route(game, false, true);
-                check(results(game)[0].getScore() == 20 && results(game)[1].getScore() == 25,
+                check(results(game)[0].getItemScore() == 20 && results(game)[1].getItemScore() == 25,
                     "Different semester maxima retained");
                 enter = true;
                 tick(game);
@@ -192,11 +192,10 @@ public final class Semester2LevelVerification {
         right = true;
         jump = attemptJump;
         tick(game);
-        waitFor(game, () -> state(game) == GameState.GAME_OVER, 3, "Real gap fall");
+        waitFor(game, () -> LifeVerificationSupport.died(game), 3, "Real gap fall");
         right = false;
-        check(number(game, "collectedItemCount") == 2, "Collected items before real fall");
-        enter = true;
-        tick(game);
+        check(LifeVerificationSupport.failedCollected(game) == 2, "Collected items before real fall");
+        LifeVerificationSupport.verifyAutomaticRetry(game);
         hud(game, 0, 0);
         check(x(game) == 80 && player(game).getY() == 60 && number(game, "currentStageNumber") == 2,
             "Retry respawns in same semester");
@@ -247,7 +246,7 @@ public final class Semester2LevelVerification {
         walk(game, target);
         waitFor(game, () -> (Boolean) playerField(game, "grounded") || state(game) != GameState.PLAYING,
             2, "Landing completes");
-        check(state(game) == GameState.PLAYING && Math.abs(player(game).getY() - height) < .01f,
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && Math.abs(player(game).getY() - height) < .01f,
             "Landing " + target + "/" + height + " actual " + x(game) + "/" + player(game).getY());
     }
 
@@ -260,7 +259,7 @@ public final class Semester2LevelVerification {
     private interface Condition { boolean ready() throws Exception; }
     private static void waitFor(Main game, Condition condition, int seconds, String message) throws Exception {
         int limit = (int) (seconds / dt) + 1;
-        while (!condition.ready() && --limit > 0) tick(game);
+        while (!condition.ready() && !LifeVerificationSupport.died(game) && --limit > 0) tick(game);
         check(limit > 0, message + " (x=" + x(game) + ", y=" + player(game).getY() + ")");
     }
 
@@ -278,7 +277,7 @@ public final class Semester2LevelVerification {
     }
 
     private static void tick(Main game) throws Exception {
-        UPDATE.invoke(game, dt);
+        LifeVerificationSupport.update(game, UPDATE, dt);
         jump = enter = escape = false;
         frames++;
     }
