@@ -19,6 +19,7 @@ public final class StageFactory {
             : stageNumber == 3 ? createSophomoreSemester1()
             : stageNumber == 4 ? createSophomoreSemester2()
             : stageNumber == 5 ? createJuniorSemester1()
+            : stageNumber == 6 ? createJuniorSemester2()
             : createTestStage(stageNumber, semesterName(stageNumber));
     }
 
@@ -150,6 +151,39 @@ public final class StageFactory {
         items.add(new GradeItem(3080, 204, 24, 24));
         return new StageDefinition(5, semesterName(5), 3200, 80, 60,
             new Rectangle(3140, 180, 20, 100), blocks, items, platforms, traps, enemies);
+    }
+
+    private static StageDefinition createJuniorSemester2() {
+        Array<Rectangle> blocks = new Array<>();
+        blocks.add(new Rectangle(0, 0, 1000, 60));
+        blocks.add(new Rectangle(1520, 0, 420, 60));
+        blocks.add(new Rectangle(2200, 300, 920, 20));
+        blocks.add(new Rectangle(3160, 380, 240, 20));
+        Array<MovingPlatform> platforms = new Array<>();
+        platforms.add(new MovingPlatform(1040, 100, 1320, 100, 140, 20, 110));
+        platforms.add(new MovingPlatform(2000, 80, 2000, 300, 140, 20, 80));
+        Array<TimedTrap> traps = new Array<>();
+        traps.add(TimedTrap.fixedSpikes(300, 60, 56, 24));
+        traps.add(TimedTrap.fixedSpikes(1810, 60, 64, 24));
+        traps.add(TimedTrap.fixedSpikes(3000, 320, 64, 24));
+        traps.add(TimedTrap.cyclingSpikes(2320, 320, 144, 72, 1.2, 0.6, 1.8, 0));
+        traps.add(TimedTrap.cyclingSpikes(2540, 320, 144, 72, 1.05, 0.75, 2.2, 2.3));
+        Array<PatrollingEnemy> enemies = new Array<>();
+        enemies.add(new PatrollingEnemy(560, 60, 30, 32, 500, 620, 90, true));
+        enemies.add(new PatrollingEnemy(1670, 60, 32, 36, 1540, 1720, 100, false));
+        enemies.add(new PatrollingEnemy(2860, 320, 32, 32, 2780, 2900, 110, false));
+        Array<GradeItem> items = new Array<>();
+        items.add(new GradeItem(140, 84, 24, 24));
+        items.add(new GradeItem(420, 84, 24, 24));
+        items.add(new GradeItem(700, 84, 24, 24));
+        items.add(new GradeItem(1160, 144, 24, 24));
+        items.add(new GradeItem(1540, 84, 24, 24));
+        items.add(new GradeItem(2060, 224, 24, 24));
+        items.add(new GradeItem(2480, 344, 24, 24));
+        items.add(new GradeItem(2710, 344, 24, 24));
+        items.add(new GradeItem(3300, 424, 24, 24));
+        return new StageDefinition(6, semesterName(6), 3400, 80, 60,
+            new Rectangle(3340, 400, 20, 100), blocks, items, platforms, traps, enemies);
     }
 
     // Preserve the original test layout; every call builds independent objects.
