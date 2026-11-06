@@ -17,6 +17,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
 import java.util.Arrays;
+import java.util.Locale;
 
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
@@ -88,6 +89,11 @@ public class Main extends ApplicationAdapter {
 
 
         ScreenUtils.clear(1f,1f,1f,1f);
+
+        if (gameState == GameState.GAME_COMPLETE) {
+            renderFinalReport(getFinalReport());
+            return;
+        }
 
         viewport.apply();
         batch.setProjectionMatrix(camera.combined);
@@ -169,11 +175,6 @@ public class Main extends ApplicationAdapter {
                 restartNotice = "RESTART FROM YEAR 1, SEMESTER 1";
                 instruction = "PRESS ENTER TO RESTART";
                 break;
-            case GAME_COMPLETE:
-                title = "GRADUATION COMPLETE";
-                detail = "TOTAL SCORE: " + getTotalScore();
-                instruction = "PRESS ENTER TO RESTART";
-                break;
             default:
                 return;
         }
@@ -202,6 +203,73 @@ public class Main extends ApplicationAdapter {
             (uiViewport.getWorldWidth() - textLayout.width) / 2f,
             uiViewport.getWorldHeight() / 2f - (restartNotice != null ? 120f : detail == null ? 40f : 80f));
         batch.end();
+    }
+
+    private FinalReport getFinalReport() {
+        return gameState == GameState.GAME_COMPLETE ? new FinalReport(completedResults, totalDeathCount) : null;
+    }
+
+    private void renderFinalReport(FinalReport report) {
+        uiViewport.apply();
+        itemRenderer.setProjectionMatrix(uiCamera.combined);
+        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        itemRenderer.setColor(0.94f, 0.96f, 0.98f, 1f);
+        itemRenderer.rect(32f, 96f, 736f, 426f);
+        itemRenderer.setColor(0.82f, 0.88f, 0.93f, 1f);
+        itemRenderer.rect(50f, 478f, 700f, 32f);
+        for (int i = 0; i < report.getSemesterCount(); i += 2) {
+            itemRenderer.setColor(0.88f, 0.92f, 0.95f, 1f);
+            itemRenderer.rect(50f, 450f - i * 28f, 700f, 28f);
+        }
+        itemRenderer.setColor(0.3f, 0.4f, 0.5f, 1f);
+        itemRenderer.rect(50f, 244f, 700f, 2f);
+        itemRenderer.end();
+
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        font.setColor(0.1f, 0.2f, 0.3f, 1f);
+        font.getData().setScale(2f);
+        drawReportCentered("FINAL ACADEMIC REPORT", 574f);
+        font.getData().setScale(1.2f);
+        drawReportCentered("CAMPUS RUNNER", 540f);
+        font.getData().setScale(1.1f);
+        font.draw(batch, "SEMESTER", 70f, 500f);
+        drawReportRight("ITEM SCORE", 370f, 500f);
+        drawReportRight("SURVIVAL BONUS", 570f, 500f);
+        drawReportRight("FINAL", 730f, 500f);
+        for (int i = 0; i < report.getSemesterCount(); i++) {
+            StageResult result = report.getSemester(i);
+            float y = 472f - i * 28f;
+            font.draw(batch, (i / 2 + 1) + "-" + (i % 2 + 1), 95f, y);
+            drawReportRight(result.getItemScore() + " / " + report.getItemMaximum(i), 370f, y);
+            drawReportRight(result.getSurvivalBonus() + " / 20", 570f, y);
+            drawReportRight(result.getFinalScore() + " / " + (report.getItemMaximum(i) + 20), 730f, y);
+        }
+        font.draw(batch, "TOTAL ITEM SCORE: " + report.getTotalItemScore() + " / " + FinalReport.MAX_ITEM_SCORE, 64f, 222f);
+        font.draw(batch, "TOTAL SURVIVAL BONUS: " + report.getTotalSurvivalBonus() + " / " + FinalReport.MAX_SURVIVAL_BONUS, 64f, 194f);
+        font.getData().setScale(1.4f);
+        font.draw(batch, "FINAL SCORE: " + report.getFinalScore() + " / " + FinalReport.MAX_FINAL_SCORE, 64f, 150f);
+        font.setColor(0.65f, 0.15f, 0.15f, 1f);
+        font.getData().setScale(1.2f);
+        font.draw(batch, "TOTAL DEATHS: " + report.getTotalDeathCount(), 490f, 222f);
+        font.setColor(0.1f, 0.2f, 0.3f, 1f);
+        font.draw(batch, String.format(Locale.ROOT, "GPA: %.2f / 4.50", report.getGpa()), 490f, 186f);
+        font.getData().setScale(1.1f);
+        font.draw(batch, String.format(Locale.ROOT, "SCORE RATE: %.2f%%", report.getScoreRate()), 490f, 150f);
+        drawReportCentered("PRESS ENTER TO RESTART FROM YEAR 1, SEMESTER 1", 60f);
+        batch.end();
+        font.getData().setScale(2f);
+        font.setColor(Color.BLACK);
+    }
+
+    private void drawReportRight(String text, float right, float y) {
+        textLayout.setText(font, text);
+        font.draw(batch, textLayout, right - textLayout.width, y);
+    }
+
+    private void drawReportCentered(String text, float y) {
+        textLayout.setText(font, text);
+        font.draw(batch, textLayout, (uiViewport.getWorldWidth() - textLayout.width) / 2f, y);
     }
 
     private void restartStage() {
