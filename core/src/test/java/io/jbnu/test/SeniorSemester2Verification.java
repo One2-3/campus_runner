@@ -42,7 +42,11 @@ public final class SeniorSemester2Verification {
             check(state(game)==GameState.GAME_COMPLETE&&number(game,"currentStageNumber")==8&&results(game)[7]==last&&total(game) == LifeVerificationSupport.expectedTotal(game,305),"No Stage 9 advance");
             try{StageFactory.createStage(9);throw new AssertionError("Stage 9 must be rejected");}catch(IllegalArgumentException expected){}
             enter=true;tick(game);
-            check(number(game,"currentStageNumber")==1&&state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game),"Existing Enter restarts Stage 1");
+            check(state(game)==GameState.GAME_COMPLETE&&results(game)[7]==last,"Report Enter preserves results");
+            jump=true;tick(game);
+            check(state(game)==GameState.GRADUATION_ENDING&&results(game)[7]==last,"Space opens ending with final record");
+            enter=true;tick(game);
+            check(number(game,"currentStageNumber")==1&&state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game),"Ending Enter restarts Stage 1");
             for(StageResult r:results(game))check(r==null,"Existing new-game result reset");
             route(newGame(),1,false); // Upper choice can finish without lower items.
             route(newGame(),2,false); // Lower choice can finish without upper items.

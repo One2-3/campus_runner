@@ -6,5 +6,6 @@ public enum GameState {
     PAUSED,
     STAGE_CLEAR,
     GAME_OVER,
-    GAME_COMPLETE
+    GAME_COMPLETE,
+    GRADUATION_ENDING
 }

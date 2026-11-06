@@ -40,4 +40,5 @@ public final class FinalReport {
     public int getTotalDeathCount() { return totalDeathCount; }
     public double getScoreRate() { return getFinalScore() / (double) MAX_FINAL_SCORE * 100.0; }
     public double getGpa() { return getFinalScore() / (double) MAX_FINAL_SCORE * 4.5; }
+    public GraduationEnding getEnding() { return GraduationEnding.fromScore(getFinalScore()); }
 }
