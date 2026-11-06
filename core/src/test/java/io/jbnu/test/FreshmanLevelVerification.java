@@ -45,6 +45,7 @@ public final class FreshmanLevelVerification {
             verifyItemRetry();
             verifyProgression();
             Semester2LevelVerification.main(args);
+            LifeSystemVerification.main(args);
             System.out.println("Freshman verification passed: layout, 4 items / 20 points, "
                 + "30/60/120 fps route, pause, retry, eight semesters and score retention.");
         } finally {
@@ -123,10 +124,9 @@ public final class FreshmanLevelVerification {
 
         player(game).reset(80, -150);
         tick(game);
-        check(state(game) == GameState.GAME_OVER, "Freshman uses existing fall failure");
-        enter = true;
-        tick(game);
-        check(state(game) == GameState.PLAYING && player(game).getY() == 60
+        check(LifeVerificationSupport.died(game), "Freshman uses existing fall failure");
+        LifeVerificationSupport.verifyAutomaticRetry(game);
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && player(game).getY() == 60
             && (Integer) get(game, "collectedItemCount") == 0, "Freshman retry resets runtime state");
         tick(game);
 
@@ -186,21 +186,20 @@ public final class FreshmanLevelVerification {
             fps, expectedItems, expectedItems * 5);
         enter = true;
         tick(game);
-        check((Integer) get(game, "currentStageNumber") == 2 && state(game) == GameState.PLAYING,
+        check((Integer) get(game, "currentStageNumber") == 2 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game),
             "Enter starts semester 2");
         check(((Array<?>) get(game, "movingPlatforms")).size == 1
             && ((Array<?>) get(game, "timedTraps")).size == 0
             && ((Array<?>) get(game, "enemies")).size == 0, "Semester 2 shuttle loaded without hazards");
         StageResult[] results = (StageResult[]) get(game, "completedResults");
-        check(results[0].getScore() == expectedItems * 5 && results[0].getCollectedItemCount() == expectedItems, "Freshman result retained");
+        check(results[0].getItemScore() == expectedItems * 5 && results[0].getCollectedItemCount() == expectedItems, "Freshman result retained");
         check((Integer) get(game, "stageScore") == 0, "Next semester starts at zero");
         verifyHudData(game, 0, 5, 0);
         player(game).reset(80, -150);
         tick(game);
-        check(state(game) == GameState.GAME_OVER, "Falling still causes game over");
-        enter = true;
-        tick(game);
-        check(state(game) == GameState.PLAYING && player(game).getY() == 60, "Enter retries current semester");
+        check(LifeVerificationSupport.died(game), "Falling still causes game over");
+        LifeVerificationSupport.verifyAutomaticRetry(game);
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && player(game).getY() == 60, "Enter retries current semester");
         check(results[0] == ((StageResult[]) get(game, "completedResults"))[0], "Retry preserves past result");
     }
 
@@ -224,11 +223,10 @@ public final class FreshmanLevelVerification {
         verifyHudData(game, 4, 4, 20);
         player(game).reset(80, -150);
         tick(game);
-        check(state(game) == GameState.GAME_OVER, "Fail after collecting all four items");
-        enter = true;
-        tick(game);
+        check(LifeVerificationSupport.died(game), "Fail after collecting all four items");
+        LifeVerificationSupport.verifyAutomaticRetry(game);
         verifyHudData(game, 0, 4, 0);
-        check(state(game) == GameState.PLAYING && (Integer) get(game, "currentStageNumber") == 1,
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && (Integer) get(game, "currentStageNumber") == 1,
             "Retry stays in freshman semester");
         Array<?> restored = (Array<?>) get(game, "gradeItems");
         for (int i = 0; i < restored.size; i++) {
@@ -251,7 +249,7 @@ public final class FreshmanLevelVerification {
     private static void dropTo(Main game, float target, float height) throws Exception {
         moveTo(game, target);
         for (int f = 0; f < 2 / dt && !grounded(game); f++) tick(game);
-        check(state(game) == GameState.PLAYING && Math.abs(player(game).getY() - height) < 0.01f,
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && Math.abs(player(game).getY() - height) < 0.01f,
             "Landing target " + target + " at height " + height + ", actual "
                 + (player(game).getCenterX() - 16) + ", " + player(game).getY());
     }
@@ -262,7 +260,7 @@ public final class FreshmanLevelVerification {
         right = goingRight;
         left = !goingRight;
         int remaining = 3000;
-        while (state(game) == GameState.PLAYING && --remaining > 0
+        while (state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && --remaining > 0
             && (goingRight ? player(game).getCenterX() - 16 < target : player(game).getCenterX() - 16 > target)) {
             tick(game);
         }
@@ -297,8 +295,8 @@ public final class FreshmanLevelVerification {
             tick(game);
             float middle = edge < 1000 ? 800 : 1920;
             moveTo(game, middle);
-            for (int i = 0; i < fps * 2 && state(game) == GameState.PLAYING; i++) tick(game);
-            check(state(game) == GameState.GAME_OVER, "Unjumped floor gap causes GAME_OVER");
+            for (int i = 0; i < fps * 2 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game); i++) tick(game);
+            check(LifeVerificationSupport.died(game), "Unjumped floor gap causes GAME_OVER");
         }
         System.out.printf("%d fps: both gaps, forgiving takeoff windows and real falls passed%n", fps);
     }
@@ -329,12 +327,11 @@ public final class FreshmanLevelVerification {
         tick(game);
         player(game).reset(740, 60);
         right = true;
-        for (int i = 0; i < 120 && state(game) == GameState.PLAYING; i++) tick(game);
-        check(state(game) == GameState.GAME_OVER, "Real gap causes game over");
+        for (int i = 0; i < 120 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game); i++) tick(game);
+        check(LifeVerificationSupport.died(game), "Real gap causes game over");
         right = false;
-        enter = true;
-        tick(game);
-        check(state(game) == GameState.PLAYING && (Integer) get(game, "currentStageNumber") == 1,
+        LifeVerificationSupport.verifyAutomaticRetry(game);
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && (Integer) get(game, "currentStageNumber") == 1,
             "Retry stays in same semester");
 
         int total = 0;
@@ -359,12 +356,12 @@ public final class FreshmanLevelVerification {
             StageResult[] results = (StageResult[]) get(game, "completedResults");
             check(results.length == 8, "Eight result slots");
             for (int i = 0; i < number; i++) {
-                check(results[i].getStageNumber() == i + 1 && results[i].getScore() == ((i + 1) % 3) * 5
+                check(results[i].getStageNumber() == i + 1 && results[i].getItemScore() == ((i + 1) % 3) * 5
                     && results[i].getCollectedItemCount() == (i + 1) % 3, "Retained semester " + (i + 1));
             }
             Method totalMethod = Main.class.getDeclaredMethod("getTotalScore");
             totalMethod.setAccessible(true);
-            check((Integer) totalMethod.invoke(game) == total, "Total includes all completed semesters");
+            check((Integer) totalMethod.invoke(game) == LifeVerificationSupport.expectedTotal(game,total), "Total includes all completed semesters");
             enter = true;
             tick(game);
             check((Integer) get(game, "currentStageNumber") == (number == 8 ? 1 : number + 1),
@@ -374,8 +371,7 @@ public final class FreshmanLevelVerification {
             if (number < 8) {
                 player(game).reset(80, -150);
                 tick(game);
-                enter = true;
-                tick(game);
+                LifeVerificationSupport.verifyAutomaticRetry(game);
                 check((Integer) get(game, "currentStageNumber") == number + 1
                     && results[number - 1] != null, "Retry retains prior semester");
             }
@@ -389,13 +385,13 @@ public final class FreshmanLevelVerification {
     private static void walkTo(Main game, float x) throws Exception {
         right = true;
         int limit = 30000;
-        while (player(game).getCenterX() - 16 < x && state(game) == GameState.PLAYING && --limit > 0) tick(game);
+        while (player(game).getCenterX() - 16 < x && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && --limit > 0) tick(game);
         right = false;
         check(limit > 0, "Route must progress");
     }
 
     private static void tick(Main game) throws Exception {
-        UPDATE.invoke(game, dt);
+        LifeVerificationSupport.update(game, UPDATE, dt);
         jump = enter = escape = false;
         frames++;
     }

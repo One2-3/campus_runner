@@ -40,23 +40,23 @@ public final class SophomoreLevelVerification {
                 });
             verifyDefinition();
             StageResult first = results(game)[0], second = results(game)[1];
-            check(first.getScore() == 20 && second.getScore() == 25, "Incoming Stage 1/2 results");
+            check(first.getItemScore() == 20 && second.getItemScore() == 25, "Incoming Stage 1/2 results");
             failAndRetry(game, false);
             check(results(game)[0] == first && results(game)[1] == second, "Retry preserves earlier results");
             route(game, false, true);
-            check(results(game)[2].getScore() == 30 && results(game)[2].getCollectedItemCount() == 6,
+            check(results(game)[2].getItemScore() == 30 && results(game)[2].getCollectedItemCount() == 6,
                 "Stage 3 records all six items / 30 points");
             enter = true;
             tick(game);
-            check(number(game, "currentStageNumber") == 4 && state(game) == GameState.PLAYING,
+            check(number(game, "currentStageNumber") == 4 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game),
                 "Enter advances to Stage 4");
-            check(results(game)[0] == first && results(game)[1] == second && results(game)[2].getScore() == 30,
+            check(results(game)[0] == first && results(game)[1] == second && results(game)[2].getItemScore() == 30,
                 "20/25/30 scores preserved after transition");
             check(number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 7,
                 "Stage 4 loads its own counters and seven items");
             Method total = Main.class.getDeclaredMethod("getTotalScore");
             total.setAccessible(true);
-            check((Integer) total.invoke(game) == 75, "Total is 75 after three semesters");
+            check((Integer) total.invoke(game) == LifeVerificationSupport.expectedTotal(game,75), "Total is 75 after three semesters");
             SophomoreSemester2Verification.verifyConnected(game, fps);
             route(newGame(), true, false);
             Main retry = newGame();
@@ -171,7 +171,7 @@ public final class SophomoreLevelVerification {
         int count = partial ? 5 : 6;
         hud(game, count);
         check(seenHudCounts == (1 << (count + 1)) - 1, "Every HUD count from zero through " + count);
-        check(results(game)[2].getScore() == count * 5 && results(game)[2].getCollectedItemCount() == count,
+        check(results(game)[2].getItemScore() == count * 5 && results(game)[2].getCollectedItemCount() == count,
             "Actual collected score recorded for full/partial clear");
         Array<?> items = (Array<?>) get(game, "gradeItems");
         for (int i = 0; i < items.size; i++) {
@@ -189,7 +189,7 @@ public final class SophomoreLevelVerification {
         for (int i = 0; i < seconds / dt; i++) {
             tick(game);
             Rectangle p = platform.getBounds();
-            check(state(game) == GameState.PLAYING && support(game) == platform
+            check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && support(game) == platform
                 && Math.abs(x(game) - p.x - offset) < .05f
                 && Math.abs(player(game).getY() - p.y - p.height) < .01f, "Stable rider on moving top");
             check(Math.abs(platform.getDeltaX()) + Math.abs(platform.getDeltaY()) <= speed * dt + .01f,
@@ -210,7 +210,7 @@ public final class SophomoreLevelVerification {
         check(state(game) == GameState.PAUSED && x(game) == px && player(game).getY() == py
             && platform(game, 0).getBounds().equals(v) && platform(game, 1).getBounds().equals(h), "Pause freezes all motion");
         escape = true; tick(game);
-        check(state(game) == GameState.PLAYING, "Resume");
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game), "Resume");
     }
 
     private static void failAndRetry(Main game, boolean attemptJump) throws Exception {
@@ -218,12 +218,12 @@ public final class SophomoreLevelVerification {
         waitFor(game, () -> platform(game, 0).isMovingForward()
             && platform(game, 0).getBounds().y >= 260, 9, "Elevator unavailable for direct crossing");
         right = true; jump = attemptJump; tick(game);
-        waitFor(game, () -> state(game) == GameState.GAME_OVER, 3, "Actual fall into gap");
+        waitFor(game, () -> LifeVerificationSupport.died(game), 3, "Actual fall into gap");
         right = false;
-        check(number(game, "collectedItemCount") == 3, "Basic items collected before failure");
-        enter = true; tick(game);
+        check(LifeVerificationSupport.failedCollected(game) == 3, "Basic items collected before failure");
+        LifeVerificationSupport.verifyAutomaticRetry(game);
         hud(game, 0);
-        check(number(game, "currentStageNumber") == 3 && state(game) == GameState.PLAYING
+        check(number(game, "currentStageNumber") == 3 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game)
             && x(game) == 80 && player(game).getY() == 60, "Retry same stage at spawn");
         check(platform(game, 0).getBounds().equals(new Rectangle(1100, 80, 160, 20))
             && platform(game, 1).getBounds().equals(new Rectangle(1760, 340, 160, 20)), "Both platform phases reset");
@@ -247,7 +247,7 @@ public final class SophomoreLevelVerification {
         jump = true;
         move(game, target);
         waitFor(game, () -> support(game) == platform || state(game) != GameState.PLAYING, 2, "Landing on moving platform");
-        check(support(game) == platform && state(game) == GameState.PLAYING, "Actual moving-platform contact");
+        check(support(game) == platform && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game), "Actual moving-platform contact");
     }
 
     private static void leap(Main game, float target, float height) throws Exception {
@@ -258,7 +258,7 @@ public final class SophomoreLevelVerification {
     private static void land(Main game, float target, float height) throws Exception {
         move(game, target);
         waitFor(game, () -> (Boolean) playerField(game, "grounded") || state(game) != GameState.PLAYING, 2, "Landing completes");
-        check(state(game) == GameState.PLAYING && Math.abs(player(game).getY() - height) < .01f,
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && Math.abs(player(game).getY() - height) < .01f,
             "Landing " + target + "/" + height + " actual " + x(game) + "/" + player(game).getY());
     }
     private static void move(Main game, float target) throws Exception {
@@ -271,7 +271,7 @@ public final class SophomoreLevelVerification {
     private interface Condition { boolean ready() throws Exception; }
     private static void waitFor(Main game, Condition condition, int seconds, String message) throws Exception {
         int remaining = (int) (seconds / dt) + 1;
-        while (!condition.ready() && --remaining > 0) tick(game);
+        while (!condition.ready() && !LifeVerificationSupport.died(game) && --remaining > 0) tick(game);
         check(remaining > 0, message + " (x=" + x(game) + ", y=" + player(game).getY() + ")");
     }
     private static Main newGame() throws Exception {
@@ -287,7 +287,7 @@ public final class SophomoreLevelVerification {
         return game;
     }
     private static void tick(Main game) throws Exception {
-        UPDATE.invoke(game, dt); jump = enter = escape = false; frames++;
+        LifeVerificationSupport.update(game, UPDATE, dt); jump = enter = escape = false; frames++;
         if (number(game, "currentStageNumber") == 3) {
             int count = number(game, "collectedItemCount");
             check(count >= 0 && count <= 6, "HUD count within current-stage total");

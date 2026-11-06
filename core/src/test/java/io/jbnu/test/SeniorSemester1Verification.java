@@ -33,21 +33,21 @@ public final class SeniorSemester1Verification {
                 });
             verifyDefinitions();
             StageResult[] prior = results(game).clone();
-            for (int i = 0; i < 6; i++) check(prior[i].getScore() == 20 + i * 5, "Incoming actual result " + i);
+            for (int i = 0; i < 6; i++) check(prior[i].getItemScore() == 20 + i * 5, "Incoming actual result " + i);
             early(game,false);
             waitFor(game, () -> platform(game).isMovingForward() && platform(game).getBounds().x >= 1000, 6, "Shuttle away");
-            move(game,870); waitFor(game, () -> state(game) == GameState.GAME_OVER, 3, "Actual open gap fall");
+            move(game,870); waitFor(game, () -> LifeVerificationSupport.died(game), 3, "Actual open gap fall");
             restart(game);
             for (int i = 0; i < 6; i++) check(results(game)[i] == prior[i], "Retry preserves semester " + i);
             route(game,false,true);
             enter = true; tick(game);
-            check(number(game,"currentStageNumber") == 8 && state(game) == GameState.PLAYING
+            check(number(game,"currentStageNumber") == 8 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game)
                 && number(game,"stageScore") == 0 && ((Array<?>) get(game,"gradeItems")).size == 12,
                 "Stage 8 final map loads twelve items");
             for (int i = 0; i < 6; i++) check(results(game)[i] == prior[i], "Stage 8 preserves result " + i);
-            check(results(game)[6].getScore() == 50, "Stage 7 result retained");
+            check(results(game)[6].getItemScore() == 50, "Stage 7 result retained");
             Method total = Main.class.getDeclaredMethod("getTotalScore"); total.setAccessible(true);
-            check((Integer) total.invoke(game) == 245, "Seven-semester total 245");
+            check((Integer) total.invoke(game) == LifeVerificationSupport.expectedTotal(game,245), "Seven-semester total 245");
             SeniorSemester2Verification.verifyConnected(game, fps);
             route(newGame(),true,false);
             verifyContacts();
@@ -175,7 +175,7 @@ public final class SeniorSemester1Verification {
         waitFor(game, () -> trap(game,index).getState() == TrapState.SAFE
             && trap(game,index).getStateElapsedTime() < .08, 5, "Fresh SAFE " + index);
         boolean touched = false; right = true; int remaining = (int) (2/dt);
-        while (x(game) < target && --remaining > 0 && state(game) == GameState.PLAYING) {
+        while (x(game) < target && --remaining > 0 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game)) {
             tick(game);
             if (player(game).overlaps(trap(game,index).getBounds())) {
                 touched = true;
@@ -183,7 +183,7 @@ public final class SeniorSemester1Verification {
             }
         }
         right = false;
-        check(remaining > 0 && touched && state(game) == GameState.PLAYING, "Safe crossing complete " + index);
+        check(remaining > 0 && touched && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game), "Safe crossing complete " + index);
     }
     private static void reachFinalShuttle(Main game, boolean partial, boolean exercise) throws Exception {
         reachTimed(game,partial,exercise);
@@ -205,7 +205,7 @@ public final class SeniorSemester1Verification {
         move(game,3560); leap(game,3720,380); move(game,3760);
         int count = partial ? 9 : 10;
         check(state(game) == GameState.STAGE_CLEAR && number(game,"collectedItemCount") == count
-            && results(game)[6].getScore() == count*5 && results(game)[6].getCollectedItemCount() == count,
+            && results(game)[6].getItemScore() == count*5 && results(game)[6].getCollectedItemCount() == count,
             "Actual full/partial clear and recorded score; count=" + number(game,"collectedItemCount"));
         check(seenHud == (1 << (count+1))-1, "Every HUD count 0 through " + count);
         Array<?> items = (Array<?>) get(game,"gradeItems");
@@ -224,7 +224,7 @@ public final class SeniorSemester1Verification {
                 leap(game,2050,320); move(game,2140);
             }
             if (i == 3) { reachFinalShuttle(game,false,false); move(game,3500); }
-            check(state(game) == GameState.GAME_OVER && enemy(game,i).touches(player(game)), "Actual enemy hit " + i);
+            check(LifeVerificationSupport.died(game) && LifeVerificationSupport.failedEnemy(game,i).touches(LifeVerificationSupport.failedPlayer(game)), "Actual enemy hit " + i);
             restart(game);
         }
         for (int i = 0; i < 5; i++) {
@@ -243,7 +243,7 @@ public final class SeniorSemester1Verification {
             if (i == 3) reachNarrow(game,false,false);
             if (i == 4) { reachFinalShuttle(game,false,false); leap(game,3550,300); }
             move(game,trap(game,i).getBounds().x+30);
-            check(state(game) == GameState.GAME_OVER && trap(game,i).isDangerousTo(player(game)), "Actual fixed spike hit " + i);
+            check(LifeVerificationSupport.died(game) && LifeVerificationSupport.failedTrap(game,i).isDangerousTo(LifeVerificationSupport.failedPlayer(game)), "Actual fixed spike hit " + i);
             restart(game);
         }
         for (int index = 5; index < 8; index++) {
@@ -256,8 +256,8 @@ public final class SeniorSemester1Verification {
                     && trap(game,selected).getStateElapsedTime() < .08, 5, "Fresh ACTIVE " + index);
                 Rectangle b = trap(game,index).getBounds(); jump = attemptJump;
                 move(game,b.x+(attemptJump ? b.width+10 : 30));
-                waitFor(game, () -> state(game) == GameState.GAME_OVER, 2, "Active walk/jump fails " + index);
-                check(trap(game,index).isDangerousTo(player(game)), "Actual timed hit " + index);
+                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Active walk/jump fails " + index);
+                check(LifeVerificationSupport.failedTrap(game,index).isDangerousTo(LifeVerificationSupport.failedPlayer(game)), "Actual timed hit " + index);
                 restart(game);
             }
         }
@@ -267,7 +267,7 @@ public final class SeniorSemester1Verification {
         visible(game,target,p.getBounds().y+p.getBounds().height);
         jump = true; move(game,target);
         waitFor(game, () -> support(game) == p || state(game) != GameState.PLAYING, 2, "Moving platform landing");
-        check(state(game) == GameState.PLAYING && support(game) == p, "Actual boarding/transfer");
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && support(game) == p, "Actual boarding/transfer");
     }
     private static void visible(Main game, float target, float height) throws Exception {
         OrthographicCamera c = (OrthographicCamera) get(game,"camera");
@@ -291,7 +291,7 @@ public final class SeniorSemester1Verification {
         float low = player(game).getY(), high = low;
         for (int i = 0; i < seconds/dt; i++) {
             tick(game);
-            check(state(game) == GameState.PLAYING && support(game) == p
+            check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && support(game) == p
                 && Math.abs(x(game)-p.getBounds().x-offset) < .05f
                 && Math.abs(player(game).getY()-p.getBounds().y-p.getBounds().height) < .01f, "Stable moving rider");
             check(Math.abs(p.getDeltaX())+Math.abs(p.getDeltaY()) <= speed*dt+.01f, "Continuous endpoint reversal");
@@ -302,9 +302,9 @@ public final class SeniorSemester1Verification {
         if (p == elevator(game)) check(high-low > 175, "Full elevator ascent/descent");
     }
     private static void restart(Main game) throws Exception {
-        check(state(game) == GameState.GAME_OVER, "Retry follows actual failure");
-        enter = true; tick(game);
-        check(state(game) == GameState.PLAYING && number(game,"currentStageNumber") == 7
+        check(LifeVerificationSupport.died(game), "Retry follows actual failure");
+        LifeVerificationSupport.verifyAutomaticRetry(game);
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && number(game,"currentStageNumber") == 7
             && x(game) == 80 && player(game).getY() == 60 && number(game,"collectedItemCount") == 0
             && number(game,"stageScore") == 0, "Retry restores stage/spawn/counters");
         StageDefinition initial = StageFactory.createStage(7);
@@ -331,7 +331,7 @@ public final class SeniorSemester1Verification {
         for (int i = 0; i < 4; i++) check(enemy(game,i).getBounds().equals(enemies[i]) && enemy(game,i).isMovingRight() == directions[i], "Pause freezes enemy " + i);
         for (int i = 0; i < 3; i++) check(moving(game,i).getBounds().equals(platforms[i]) && trap(game,i+5).getState() == states[i]
             && trap(game,i+5).getStateElapsedTime() == elapsed[i], "Pause freezes platform and timer " + i);
-        escape = true; tick(game); check(state(game) == GameState.PLAYING, "Resume");
+        escape = true; tick(game); check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game), "Resume");
     }
     private static MovingPlatform moving(Main game, int i) throws Exception { return (MovingPlatform) ((Array<?>) get(game,"movingPlatforms")).get(i); }
     private static MovingPlatform elevator(Main game) throws Exception { return moving(game,1); }
@@ -342,7 +342,7 @@ public final class SeniorSemester1Verification {
         visible(game,target,height);
         jump = true; move(game, target);
         waitFor(game, () -> (Boolean) playerField(game, "grounded") || state(game) != GameState.PLAYING, 2, "Landing");
-        check(state(game) == GameState.PLAYING && Math.abs(player(game).getY() - height) < .01f,
+        check(state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game) && Math.abs(player(game).getY() - height) < .01f,
             "Land " + target + "/" + height + " actual " + x(game) + "/" + player(game).getY());
     }
     private static void move(Main game, float target) throws Exception {
@@ -353,7 +353,7 @@ public final class SeniorSemester1Verification {
     private interface Condition { boolean ready() throws Exception; }
     private static void waitFor(Main game, Condition condition, int seconds, String message) throws Exception {
         int remaining = (int) (seconds / dt) + 1;
-        while (!condition.ready() && --remaining > 0) tick(game);
+        while (!condition.ready() && !LifeVerificationSupport.died(game) && --remaining > 0) tick(game);
         check(remaining > 0, message + " x=" + x(game) + " y=" + player(game).getY());
     }
     private static Main newGame() throws Exception {
@@ -368,7 +368,7 @@ public final class SeniorSemester1Verification {
         LOAD.invoke(game, 7); return game;
     }
     private static void tick(Main game) throws Exception {
-        UPDATE.invoke(game, dt); jump = enter = escape = false; frames++;
+        LifeVerificationSupport.update(game, UPDATE, dt); jump = enter = escape = false; frames++;
         if (number(game, "currentStageNumber") == 7) {
             int count = number(game, "collectedItemCount");
             check(count >= 0 && count <= 10 && ((Array<?>) get(game, "gradeItems")).size == 10
