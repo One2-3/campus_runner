@@ -32,6 +32,7 @@ public class Main extends ApplicationAdapter {
     private MovingPlatformRenderer movingPlatformRenderer;
     private Texture gradeItemTexture;
     private PlayerSprites playerSprites;
+    private EnemySprites enemySprites;
     private final HitFeedback hitFeedback = new HitFeedback();
     private final Matrix4 worldRenderProjection = new Matrix4();
     private boolean waitForHitKeyRelease;
@@ -72,6 +73,7 @@ public class Main extends ApplicationAdapter {
         batch = new SpriteBatch();
         itemRenderer = new ShapeRenderer();
         playerSprites = new PlayerSprites();
+        enemySprites = new EnemySprites();
         fixedPlatformRenderer = new FixedPlatformRenderer();
         movingPlatformRenderer = new MovingPlatformRenderer();
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
@@ -147,12 +149,12 @@ public class Main extends ApplicationAdapter {
         for (TimedTrap trap : timedTraps) {
             trap.render(itemRenderer);
         }
-        for (PatrollingEnemy enemy : enemies) {
-            enemy.render(itemRenderer);
-        }
         itemRenderer.end();
 
         batch.begin();
+        for (PatrollingEnemy enemy : enemies) {
+            enemySprites.render(batch, enemy);
+        }
         for (GradeItem item : gradeItems) {
             item.render(batch, gradeItemTexture);
         }
@@ -636,6 +638,7 @@ public class Main extends ApplicationAdapter {
     public void dispose() {
         batch.dispose();
         playerSprites.dispose();
+        enemySprites.dispose();
         fixedPlatformRenderer.dispose();
         movingPlatformRenderer.dispose();
         flagTexture.dispose();
