@@ -15,6 +15,7 @@ final class LifeVerificationSupport {
         Array<TimedTrap> traps;
         Array<PatrollingEnemy> enemies;
         int stage, deaths, totalDeaths, lives, collected;
+        float delta;
     }
 
     @SuppressWarnings("unchecked")
@@ -27,7 +28,17 @@ final class LifeVerificationSupport {
         int beforeDeaths = number(game, "semesterDeathCount"), beforeLives = number(game, "lives");
         int beforeTotalDeaths = number(game, "totalDeathCount");
         Array<GradeItem> items = (Array<GradeItem>) get(game, "gradeItems");
+        GameState beforeState = (GameState)get(game,"gameState");
         update.invoke(game, dt);
+        if (beforeState == GameState.PLAYING && get(game,"gameState") == GameState.DYING) {
+            candidate.deaths = beforeDeaths+1; candidate.totalDeaths = beforeTotalDeaths+1; candidate.lives = beforeLives-1;
+            candidate.delta = dt;
+            for (GradeItem item : items) if (item.isCollected()) candidate.collected++;
+            check(number(game,"lives") == beforeLives && number(game,"semesterDeathCount") == beforeDeaths
+                && number(game,"totalDeathCount") == beforeTotalDeaths,"Contact enters DYING without an early life/death charge");
+            failures.put(game,candidate);
+            return;
+        }
         if (number(game, "currentStageNumber") == candidate.stage
             && number(game, "semesterDeathCount") == beforeDeaths + 1) {
             candidate.deaths = beforeDeaths + 1;
@@ -53,6 +64,12 @@ final class LifeVerificationSupport {
     /** Assert that the runtime has already reset, then acknowledge the observed death event. */
     static void verifyAutomaticRetry(Main game) throws Exception {
         Failure f = failure(game);
+        if (get(game,"gameState") == GameState.DYING) {
+            Method update = Main.class.getDeclaredMethod("update",float.class); update.setAccessible(true);
+            int limit = (int)Math.ceil(1f/f.delta)+2;
+            while (get(game,"gameState") == GameState.DYING && --limit > 0) update.invoke(game,f.delta);
+            check(limit > 0,"Contact feedback finishes through actual timed updates");
+        }
         StageDefinition stage = (StageDefinition) get(game, "stage");
         Player player = (Player) get(game, "player");
         check(f.lives > 0 && get(game, "gameState") == GameState.PLAYING

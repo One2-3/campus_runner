@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
@@ -26,7 +27,11 @@ public class Main extends ApplicationAdapter {
     public static final int MAX_LIVES = 5;
 
     private SpriteBatch batch;
-    private Texture playerTexture, blockTexture, flagTexture;
+    private Texture blockTexture, flagTexture;
+    private PlayerSprites playerSprites;
+    private final HitFeedback hitFeedback = new HitFeedback();
+    private final Matrix4 worldRenderProjection = new Matrix4();
+    private boolean waitForHitKeyRelease;
     private OrthographicCamera camera;
     private FitViewport viewport;
     private OrthographicCamera uiCamera;
@@ -63,7 +68,7 @@ public class Main extends ApplicationAdapter {
     public void create() {
         batch = new SpriteBatch();
         itemRenderer = new ShapeRenderer();
-        playerTexture = new Texture(Gdx.files.internal("player.png"));
+        playerSprites = new PlayerSprites();
         blockTexture = new Texture(Gdx.files.internal("block.png"));
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
 
@@ -116,17 +121,19 @@ public class Main extends ApplicationAdapter {
         }
 
         viewport.apply();
-        batch.setProjectionMatrix(camera.combined);
+        Matrix4 worldProjection = getWorldRenderProjection();
+        boolean showHurt = gameState == GameState.DYING || gameState == GameState.GAME_OVER;
+        batch.setProjectionMatrix(worldProjection);
         batch.begin();
         for (Rectangle block : blocks) {
             batch.draw(blockTexture, block.x, block.y, block.width, block.height);
         }
         batch.draw(flagTexture, flag.x, flag.y, flag.width, flag.height);
-        player.render(batch, playerTexture);
+        if (!showHurt) playerSprites.render(batch, player, false);
         batch.end();
 
         // SpriteBatch와 ShapeRenderer는 동시에 begin하지 않습니다.
-        itemRenderer.setProjectionMatrix(camera.combined);
+        itemRenderer.setProjectionMatrix(worldProjection);
         itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
         for (MovingPlatform platform : movingPlatforms) {
             platform.render(itemRenderer);
@@ -141,6 +148,12 @@ public class Main extends ApplicationAdapter {
             item.render(itemRenderer);
         }
         itemRenderer.end();
+
+        if (showHurt) {
+            batch.begin();
+            playerSprites.render(batch, player, true);
+            batch.end();
+        }
 
         renderHud();
         renderStateUi();
@@ -414,6 +427,8 @@ public class Main extends ApplicationAdapter {
     }
 
     private void resetStageRuntime(int stageNumber) {
+        hitFeedback.reset();
+        waitForHitKeyRelease = false;
         stage = StageFactory.createStage(stageNumber);
         currentStageNumber = stage.getStageNumber();
         // 이전 학기의 플레이어와 실행용 객체를 모두 교체합니다.
@@ -460,6 +475,18 @@ public class Main extends ApplicationAdapter {
     }
 
     private void update(float dt) {
+        if (gameState == GameState.DYING) {
+            if (hitFeedback.advance(dt)) {
+                boolean held = isGameplayKeyHeld();
+                applyDeath();
+                waitForHitKeyRelease = held;
+            }
+            return;
+        }
+        if (waitForHitKeyRelease) {
+            if (!isGameplayKeyHeld()) waitForHitKeyRelease = false;
+            return;
+        }
         if (gameState == GameState.TITLE_SCREEN) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) startNewGame();
             return; // Do not also apply movement, jump, or ESC on the start frame.
@@ -533,14 +560,19 @@ public class Main extends ApplicationAdapter {
                 break;
             }
         }
-        if (player.getY() < -100 || trapHit || enemyHit) {
-            semesterDeathCount++;
-            totalDeathCount++;
-            semesterDeaths[currentStageNumber - 1] = semesterDeathCount;
-            lives--;
-            if (lives == 0) gameState = GameState.GAME_OVER;
-            else restartStage();
-            return; // One death per frame; never clear or update the freshly reset runtime here.
+        if (player.getY() < -100) {
+            applyDeath(); // Off-screen falls retain the original immediate-death policy.
+            return;
+        }
+        if (trapHit || enemyHit) {
+            if (lives == 1) {
+                hitFeedback.reset();
+                applyDeath();
+            } else {
+                hitFeedback.start();
+                gameState = GameState.DYING;
+            }
+            return;
         }
 
         // 마지막 학기도 결과를 저장한 뒤 전체 완료로 전환합니다.
@@ -557,6 +589,25 @@ public class Main extends ApplicationAdapter {
         // 6. 카메라는 X축으로만 따라갑니다.
         camera.position.x = getCameraX();
         camera.update();
+    }
+
+    private void applyDeath() {
+        semesterDeathCount++;
+        totalDeathCount++;
+        semesterDeaths[currentStageNumber - 1] = semesterDeathCount;
+        lives--;
+        if (lives == 0) gameState = GameState.GAME_OVER;
+        else restartStage();
+    }
+
+    private boolean isGameplayKeyHeld() {
+        return Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)
+            || Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyPressed(Input.Keys.ENTER)
+            || Gdx.input.isKeyPressed(Input.Keys.R) || Gdx.input.isKeyPressed(Input.Keys.ESCAPE);
+    }
+
+    private Matrix4 getWorldRenderProjection() {
+        return worldRenderProjection.set(camera.combined).translate(-hitFeedback.getShakeX(),-hitFeedback.getShakeY(),0);
     }
 
     private float getCameraX() {
@@ -578,7 +629,7 @@ public class Main extends ApplicationAdapter {
     @Override
     public void dispose() {
         batch.dispose();
-        playerTexture.dispose();
+        playerSprites.dispose();
         blockTexture.dispose();
         flagTexture.dispose();
         font.dispose();
