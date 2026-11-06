@@ -48,6 +48,7 @@ public final class FreshmanLevelVerification {
             LifeSystemVerification.main(args);
             FinalReportVerification.main(args);
             GraduationEndingVerification.main(args);
+            TitleScreenVerification.main(args);
             System.out.println("Freshman verification passed: layout, 4 items / 20 points, "
                 + "30/60/120 fps route, pause, retry, eight semesters and score retention.");
         } finally {

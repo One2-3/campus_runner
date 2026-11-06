@@ -51,7 +51,7 @@ public class Main extends ApplicationAdapter {
     private final int[] semesterDeaths = new int[StageFactory.STAGE_COUNT];
     private int currentStageNumber = 1;
     private final StageResult[] completedResults = new StageResult[StageFactory.STAGE_COUNT];
-    private GameState gameState = GameState.PLAYING;
+    private GameState gameState = GameState.TITLE_SCREEN;
 
 
     @Override
@@ -77,7 +77,6 @@ public class Main extends ApplicationAdapter {
         endingFont = new BitmapFont(Gdx.files.internal("fonts/ending-ko.fnt"));
         textLayout = new GlyphLayout();
 
-        startNewGame();
     }
 
 
@@ -87,6 +86,11 @@ public class Main extends ApplicationAdapter {
         // 큰 프레임 시간으로 인해 한 번에 너무 멀리 이동하는 것을 제한합니다.
         float dt = Math.min(Gdx.graphics.getDeltaTime(), 1f / 30f);
         update(dt);
+
+        if (gameState == GameState.TITLE_SCREEN) {
+            renderTitleScreen();
+            return;
+        }
 
 
 
@@ -131,6 +135,54 @@ public class Main extends ApplicationAdapter {
         renderHud();
         renderStateUi();
 
+    }
+
+    private void renderTitleScreen() {
+        ScreenUtils.clear(0.035f, 0.06f, 0.13f, 1f);
+        uiViewport.apply();
+        itemRenderer.setProjectionMatrix(uiCamera.combined);
+        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        // A simple mortarboard and tassel, drawn entirely in UI coordinates.
+        itemRenderer.setColor(0.98f, 0.81f, 0.36f, 1f);
+        itemRenderer.triangle(344f, 530f, 400f, 550f, 456f, 530f);
+        itemRenderer.triangle(344f, 530f, 456f, 530f, 400f, 510f);
+        itemRenderer.rect(378f, 492f, 44f, 17f);
+        itemRenderer.rect(453f, 495f, 3f, 35f);
+        itemRenderer.circle(454.5f, 493f, 4f, 16);
+        itemRenderer.setColor(0.085f, 0.13f, 0.22f, 1f);
+        itemRenderer.rect(150f, 160f, 500f, 136f);
+        // Campus silhouettes leave the central text area clear.
+        itemRenderer.rect(28f, 0f, 92f, 82f);
+        itemRenderer.triangle(18f, 82f, 74f, 112f, 130f, 82f);
+        itemRenderer.rect(680f, 0f, 92f, 82f);
+        itemRenderer.triangle(670f, 82f, 726f, 112f, 782f, 82f);
+        itemRenderer.setColor(0.98f, 0.81f, 0.36f, 1f);
+        itemRenderer.rect(180f, 295f, 440f, 2f);
+        itemRenderer.end();
+
+        batch.setProjectionMatrix(uiCamera.combined);
+        batch.begin();
+        font.setColor(0.98f, 0.81f, 0.36f, 1f);
+        font.getData().setScale(3.2f);
+        drawReportCentered("CAMPUS RUNNER", 460f);
+        font.setColor(0.76f, 0.83f, 0.94f, 1f);
+        font.getData().setScale(1.4f);
+        drawReportCentered("8 SEMESTERS TO GRADUATION", 401f);
+        font.getData().setScale(1.15f);
+        drawReportCentered("Collect credits. Survive semesters. Graduate!", 354f);
+        font.setColor(0.98f, 0.81f, 0.36f, 1f);
+        font.getData().setScale(1.2f);
+        drawReportCentered("CONTROLS", 279f);
+        font.setColor(0.9f, 0.94f, 1f, 1f);
+        font.getData().setScale(1.1f);
+        drawReportCentered("LEFT / RIGHT ARROWS  -  MOVE", 245f);
+        drawReportCentered("SPACE  -  JUMP", 217f);
+        drawReportCentered("ESC  -  PAUSE / RESUME", 189f);
+        font.getData().setScale(1.6f);
+        drawReportCentered("PRESS ENTER TO START", 116f);
+        batch.end();
+        font.getData().setScale(2f);
+        font.setColor(Color.BLACK);
     }
 
     private void renderHud() {
@@ -380,6 +432,10 @@ public class Main extends ApplicationAdapter {
 
 
     private void update(float dt) {
+        if (gameState == GameState.TITLE_SCREEN) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) startNewGame();
+            return; // Do not also apply movement, jump, or ESC on the start frame.
+        }
         // Consume report input separately, so simultaneous Space/Enter cannot also restart the game.
         if (gameState == GameState.GAME_COMPLETE) {
             if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) gameState = GameState.GRADUATION_ENDING;
