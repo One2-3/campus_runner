@@ -31,6 +31,7 @@ public class Main extends ApplicationAdapter {
     private FixedPlatformRenderer fixedPlatformRenderer;
     private MovingPlatformRenderer movingPlatformRenderer;
     private Texture gradeItemTexture;
+    private PixelHudRenderer pixelHudRenderer;
     private PlayerSprites playerSprites;
     private EnemySprites enemySprites;
     private TrapSprites trapSprites;
@@ -83,6 +84,7 @@ public class Main extends ApplicationAdapter {
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
         gradeItemTexture = new Texture(Gdx.files.internal("pixel/items/grade_a_plus_128.png"));
         gradeItemTexture.setFilter(Texture.TextureFilter.Nearest,Texture.TextureFilter.Nearest);
+        pixelHudRenderer = new PixelHudRenderer(gradeItemTexture);
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
@@ -220,30 +222,10 @@ public class Main extends ApplicationAdapter {
     private void renderHud() {
         uiViewport.apply();
         batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        seasonalBackgroundRenderer.renderHudBackdrop(batch);
-        float top = uiViewport.getWorldHeight() - 20f;
-        font.draw(batch, "YEAR: " + stage.getYear(), 20f, top);
-        font.draw(batch, "SEMESTER: " + stage.getSemester(), 20f, top - 30f);
-        font.draw(batch, "ITEMS: " + collectedItemCount + " / " + gradeItems.size,
-            20f, top - 60f);
-        font.draw(batch, "SCORE: " + stageScore, 20f, top - 90f);
-        font.draw(batch, "LIVES: " + lives + " / " + semesterMaxLives, 520f, top);
-        batch.end();
-
-        itemRenderer.setProjectionMatrix(uiCamera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        for (int i = 0; i < semesterMaxLives; i++) {
-            float x = 532f + i * 36f;
-            float y = top - 50f;
-            itemRenderer.setColor(i < lives ? Color.RED : Color.LIGHT_GRAY);
-            itemRenderer.circle(x - 6f, y + 12f, 6f, 16);
-            itemRenderer.circle(x + 6f, y + 12f, 6f, 16);
-            itemRenderer.triangle(x - 12f, y + 12f, x + 12f, y + 12f, x, y);
-        }
-        itemRenderer.end();
+        pixelHudRenderer.render(batch, uiViewport.getWorldWidth(), uiViewport.getWorldHeight(),
+            stage.getYear(), stage.getSemester(), stageScore, collectedItemCount, gradeItems.size,
+            lives, semesterMaxLives);
     }
-
     private void renderVacationEvent() {
         vacationRenderer.render(vacationGame);
     }
@@ -646,6 +628,7 @@ public class Main extends ApplicationAdapter {
         fixedPlatformRenderer.dispose();
         movingPlatformRenderer.dispose();
         flagTexture.dispose();
+        pixelHudRenderer.dispose();
         gradeItemTexture.dispose();
         font.dispose();
         endingFont.dispose();
