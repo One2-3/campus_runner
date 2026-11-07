@@ -1,5 +1,128 @@
 # Campus Runner — 고정 발판 픽셀 아트 (STEP 10-3-2)
 
+## 고정 발판 알파 실루엣 외곽선 (2026-11-07)
+
+### 변경 파일 및 설정
+
+- core/src/main/java/io/jbnu/test/FixedPlatformRenderer.java: 합성 알파 샘플링·외곽선 텍스처 캐시·화면 픽셀 배율·해제.
+- core/src/main/java/io/jbnu/test/PlatformOutlineMask.java: 외부 투명 영역 flood-fill 및 외곽 띠 계산.
+- core/src/main/java/io/jbnu/test/Main.java: 현재 월드 투영 행렬/viewport/HiDPI에서 고정 발판의 화면 배율 전달.
+- core/src/test/java/io/jbnu/test/PlatformOutlineVerification.java: 알파 노치·구멍·연결부·두께 검사.
+- core/src/test/java/io/jbnu/test/FreshmanLevelVerification.java: 새 검증을 기존 build 체인에 연결.
+- docs/PLATFORM_PIXEL_ART.md: 구현·비교·성능 결과 기록.
+
+설정은 FixedPlatformRenderer에 분리했다.
+
+| 설정 | 기본값 |
+| --- | --- |
+| OUTLINE_ENABLED | true |
+| OUTLINE_COLOR_RGBA | 0x514D38FF (#514D38) |
+| OUTLINE_PIXELS | 1 (실제 화면 픽셀 목표) |
+| OUTLINE_ALPHA_THRESHOLD | 0.10 |
+
+setOutlineEnabled(false/true)로 같은 renderer에서 외곽선 전후를 비교할 수 있다.
+일반 게임에 새 조작키나 디버그 UI는 추가하지 않았다.
+기존 PNG, 본문 잔디/흙 조합, 모든 Rectangle 좌표/크기/충돌과 Player 물리는 유지한다.
+이동 발판·몬스터·가시·아이템·HUD·배경 C 보정 셰이더·패럴랙스는 수정하지 않았다.
+
+### PNG 알파 기반 실루엣
+
+사각형 Rectangle 테두리를 선으로 그리지 않는다.
+기존 soil/grass/longGrass/left/right 조각과 최종 부분 타일의 크롭을 같은 순서로 계산해
+완성된 한 발판의 합성 alpha를 샘플링한다. 알파 10% 이상인 픽셀을 보이는 영역으로 삼는다.
+원본 Pixmap은 읽기 전용으로 유지하며, 원본 PNG 파일을 수정하거나 저장하지 않는다.
+
+완성 마스크의 바깥 경계에서 시작해 외부 투명 픽셀만 flood-fill한 뒤,
+그 중 보이는 픽셀의 1픽셀 이웃만 #514D38로 칠한다.
+이미 보이는 픽셀 위에는 선을 그리지 않고, 막힌 내부 투명 구멍에도 선을 넣지 않는다.
+타일마다 따로 외곽선을 만들지 않으므로 내부 타일 연결부·흙 무늬·꽃 장식의 윤곽을 추적하지 않는다.
+불규칙한 알파 모양이면 그 노치와 돌출을 따라가며, 완전히 투명한 마스크는 아무 선도 만들지 않는다.
+
+현재 원본을 그릴 때 사용하는 내부 크롭은 최소 alpha가 245/255 이상으로 투명 구멍이 없다.
+따라서 현재 발판의 실제 보이는 실루엣은 대부분 직선이고 외곽선도 직선으로 보인다.
+이는 충돌 박스 테두리를 복사한 것이 아니라 현재 합성 PNG의 실제 알파 결과다.
+새로운 잔디 굴곡이나 투명 여백을 만들려고 기존 크롭을 바꾸지는 않았다.
+소스 크롭 전체가 임계값 이상인 경우에는 미리 계산한 최소 알파로 가시성을 빠르게 판단한다.
+
+### 화면 두께와 캐시
+
+Main에서 월드 투영 행렬의 Y 배율, 실제 viewport 높이, backbuffer/창 DPI 비율로
+pixelsPerWorldUnit을 구해 SpriteBatch.begin 전에 전달한다.
+따라서 같은 월드 단위 두께를 확대하는 방식이 아니라 실제 화면에 맞춘 마스크 해상도를 사용한다.
+크기와 화면 배율이 같은 발판은 한 외곽선 Texture를 공유하고, 위치와 카메라 평행 이동은 캐시 키에 넣지 않는다.
+
+- 해상도/카메라 zoom이 바뀌면 이전 외곽선 Texture를 해제하고 새 배율에서 다시 생성한다.
+- 원본 Texture와 외곽선 Texture는 모두 Nearest이며 mipmap/블러를 추가하지 않는다.
+- 원본 그림은 기존 방식으로 그대로 그리고, 캐시 외곽선은 그 뒤에 1 quad만 추가한다.
+- 매 프레임 alpha 스캔·flood-fill·Texture 생성·새 셰이더/FBO 작업은 하지 않는다.
+- GPU 외곽선 캐시는 32MiB로 제한하고 최대 Texture 크기도 확인한다.
+  한 마스크가 지나치게 클 경우 캐시 해상도를 제한하며, 캐시 한도 갱신 전에는 pending batch를 flush한다.
+- 원본 RGBA Pixmap 4개의 추가 CPU 보관량은 약 2.1MiB이며 outline 캐시 예산과 별도다.
+  마스크 생성용 Java 배열과 임시 Pixmap은 생성 시에만 필요하고 임시 Pixmap은 즉시 해제한다.
+- 종료 시 원본 Texture·외곽선 캐시·보관 Pixmap을 모두 해제한다.
+- 외곽선 draw가 변경한 packed color와 블렌딩 활성 여부를 복원하고 기존 셰이더는 바꾸지 않는다.
+
+### 자동 및 실제 GUI 검증
+
+최종 Gradle build 성공. 기존 8학기·30/60/120fps 물리/충돌/피격/점수/방학/GPA 회귀 검증 통과.
+기존 검증 조건은 완화하지 않았다.
+
+PlatformOutlineVerification은 다음을 검사한다.
+
+- 경계 사각형 안의 투명 노치에도 실제 알파를 따라 선이 생김.
+- 사각형의 빈 모서리에는 잘못된 선이 없음.
+- 원본 불투명 픽셀에는 선이 없음.
+- 합쳐진 타일 연결부와 닫힌 내부 알파 구멍에는 선이 없음.
+- 1픽셀/2픽셀 띠의 픽셀 수가 정확하고 투명 마스크에는 선이 없음.
+
+실제 LWJGL 창에서 긴 바닥·짧은 발판·높은 기둥·배경 겹침(낮/밤)·2배 확대·2배 축소를
+800×600·1280×720·1920×1080으로 비교했다. 총 42개 전후 캡처다.
+
+- 전후 RGB 차이는 발판 외곽의 약 2픽셀 범위에만 존재했고, 내부 무늬/타일 이음새와 다른 오브젝트는 유지됐다.
+- 대표 윗면을 픽셀로 측정한 결과 기본/2배 확대/2배 축소 × 세 해상도 9개 모두 외곽선이 1px이었다.
+- 외곽선 OFF 화면은 이전 배경 C 비교 캡처와 세 해상도 모두 전체 픽셀이 완전히 동일했다.
+- 고정 Rectangle 배열을 복사해 전후 좌표/크기가 같은지도 검사했다.
+- 해상도 변경으로 폐기된 캐시와 최종 캐시, 원본 텍스처가 모두 GL 핸들 0으로 해제됐다.
+- 추가 외곽선 셰이더는 없다. 기존 배경 보정 셰이더의 종료 시 해제도 그대로 통과했다.
+
+GUI의 카메라/플레이어 배치는 장면 확인용 픽스처이며 월드를 기존 입력 해제 대기로 고정했다.
+전체 경로는 기존 실제 입력 기반 회귀 검증이 확인한다. 키보드로 전 학기를 수동 플레이한 것은 아니다.
+
+### 성능 측정
+
+측정 결과는 본 실행 환경의 고정 발판 pass만 해당하며 전체 게임 프레임 시간 보장은 아니다.
+디스크 PNG 초기 로드와 JVM 첫 시작 비용은 별도다.
+
+| 항목 | 결과 |
+| --- | --- |
+| 명시적으로 캐시를 비운 후 한 장면의 4~8개 고유 마스크 생성/업로드 | 합계 0.57~7.28ms |
+| 캐시 재사용 후 고정 발판 pass | 0.10~0.51ms |
+| OFF 대비 추가 pass 비용 중앙값 | 약 0.057ms |
+| 측정한 외곽선 캐시 최대 사용량 (2배 확대 포함) | 4.13MiB / 한도 32MiB |
+| 한 장면당 48회 warm pass 중 새 마스크 생성 | 0회 |
+
+Warm 시간은 4회 준비 후 20회 평균이며 GL finish로 GPU 완료까지 기다렸다.
+VSync를 끄고 측정했으며 드라이버/스케줄링 편차 때문에 일부 ON 표본이 OFF보다 짧을 수도 있다.
+캐시를 비우는 일은 진단 도구가 강제로 수행했으며, 정상 실행에서는 새 크기/배율을 처음 만날 때만 생성한다.
+세부 수치는 build/platform-outline-gui/timing.csv에 있다.
+
+### 전후 캡처
+
+위치: build/platform-outline-gui/ (Git 제외).
+
+| 장면 | 적용 전 | 적용 후 |
+| --- | --- | --- |
+| 배경과 발판, 800×600 | [전](../build/platform-outline-gui/background-day-before-800x600.png) | [후](../build/platform-outline-gui/background-day-after-800x600.png) |
+| 긴 바닥, 800×600 | [전](../build/platform-outline-gui/long-floor-before-800x600.png) | [후](../build/platform-outline-gui/long-floor-after-800x600.png) |
+| 높은 기둥, 1280×720 | [전](../build/platform-outline-gui/tall-column-before-1280x720.png) | [후](../build/platform-outline-gui/tall-column-after-1280x720.png) |
+| 짧은 발판, 1920×1080 | [전](../build/platform-outline-gui/short-ledges-before-1920x1080.png) | [후](../build/platform-outline-gui/short-ledges-after-1920x1080.png) |
+| 확대, 1920×1080 | [전](../build/platform-outline-gui/zoom-in-before-1920x1080.png) | [후](../build/platform-outline-gui/zoom-in-after-1920x1080.png) |
+| 축소, 800×600 | [전](../build/platform-outline-gui/zoom-out-before-800x600.png) | [후](../build/platform-outline-gui/zoom-out-after-800x600.png) |
+
+외곽선은 장식이며 발판의 착지면/충돌 범위를 1픽셀만큼 늘리는 기능은 아니다.
+기존 내부 흙 무늬 반복/패치 색 차이는 그대로이고, 이번에 별도 내부 선을 추가하지 않았다.
+Git commit·push·merge는 실행하지 않았다.
+
 ## 변경 파일과 범위
 
 - `core/src/main/java/io/jbnu/test/FixedPlatformRenderer.java`: 잔디/흙 패치 렌더링, 공유 텍스처 로드·Nearest·해제.
