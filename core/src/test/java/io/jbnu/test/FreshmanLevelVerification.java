@@ -36,6 +36,7 @@ public final class FreshmanLevelVerification {
                     throw new UnsupportedOperationException(method.getName());
                 });
             verifyDefinitions();
+            SpikeCollisionVerification.main(args);
             for (int fps : new int[] {30, 60, 120}) {
                 verifyPhysics(fps);
                 verifyRoute(fps, false);

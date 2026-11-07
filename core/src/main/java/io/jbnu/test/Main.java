@@ -33,6 +33,7 @@ public class Main extends ApplicationAdapter {
     private Texture gradeItemTexture;
     private PlayerSprites playerSprites;
     private EnemySprites enemySprites;
+    private TrapSprites trapSprites;
     private final HitFeedback hitFeedback = new HitFeedback();
     private final Matrix4 worldRenderProjection = new Matrix4();
     private boolean waitForHitKeyRelease;
@@ -74,6 +75,7 @@ public class Main extends ApplicationAdapter {
         itemRenderer = new ShapeRenderer();
         playerSprites = new PlayerSprites();
         enemySprites = new EnemySprites();
+        trapSprites = new TrapSprites();
         fixedPlatformRenderer = new FixedPlatformRenderer();
         movingPlatformRenderer = new MovingPlatformRenderer();
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
@@ -141,17 +143,10 @@ public class Main extends ApplicationAdapter {
         }
         batch.draw(flagTexture, flag.x, flag.y, flag.width, flag.height);
         if (!showHurt) playerSprites.render(batch, player, false);
-        batch.end();
 
-        // SpriteBatch와 ShapeRenderer는 동시에 begin하지 않습니다.
-        itemRenderer.setProjectionMatrix(worldProjection);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
         for (TimedTrap trap : timedTraps) {
-            trap.render(itemRenderer);
+            trapSprites.render(batch, trap);
         }
-        itemRenderer.end();
-
-        batch.begin();
         for (PatrollingEnemy enemy : enemies) {
             enemySprites.render(batch, enemy);
         }
@@ -639,6 +634,7 @@ public class Main extends ApplicationAdapter {
         batch.dispose();
         playerSprites.dispose();
         enemySprites.dispose();
+        trapSprites.dispose();
         fixedPlatformRenderer.dispose();
         movingPlatformRenderer.dispose();
         flagTexture.dispose();

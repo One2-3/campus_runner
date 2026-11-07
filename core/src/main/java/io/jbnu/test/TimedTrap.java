@@ -1,6 +1,5 @@
 package io.jbnu.test;
 
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.Rectangle;
 
 /** 고체 충돌에는 참여하지 않으며 ACTIVE일 때 위험합니다. 고정 가시는 항상 ACTIVE입니다. */
@@ -9,6 +8,7 @@ public final class TimedTrap {
     private final double safeDuration, warningDuration, activeDuration, cycleDuration;
     private final double initialOffset;
     private final boolean fixed, spikeDesign;
+    private final SpikeLayout spikeLayout;
     private double phase;
     private TrapState state;
     private double stateElapsedTime;
@@ -52,6 +52,7 @@ public final class TimedTrap {
         this.initialOffset = initialOffset % cycleDuration;
         this.fixed = fixed;
         this.spikeDesign = spikeDesign;
+        spikeLayout = spikeDesign ? new SpikeLayout(bounds) : null;
         reset();
     }
 
@@ -101,61 +102,13 @@ public final class TimedTrap {
     public double getStateElapsedTime() { return stateElapsedTime; }
     public Rectangle getBounds() { return new Rectangle(bounds); }
     public boolean isFixed() { return fixed; }
+    public boolean usesSpikeDesign() { return spikeDesign; }
+    public SpikeLayout getSpikeLayout() { return spikeLayout; }
 
     public boolean isDangerousTo(Player player) {
         if (state != TrapState.ACTIVE || !player.overlaps(bounds)) return false;
         if (!spikeDesign) return true; // Preserve legacy test-map collision behavior.
-        Rectangle body = player.getBounds();
-        // Each upright triangle narrows monotonically above its base. At the body's
-        // lowest overlapping Y, its widest possible intersection decides contact.
-        float bottom = Math.max(bounds.y, body.y);
-        float width = bounds.width / 4f;
-        float half = width * 0.5f * (1 - (bottom - bounds.y) / bounds.height);
-        for (int i = 0; i < 4; i++) {
-            float center = bounds.x + (i + 0.5f) * width;
-            if (body.x < center + half && body.x + body.width > center - half) return true;
-        }
-        return false;
+        return spikeLayout.overlaps(player.getBounds());
     }
 
-    public void render(ShapeRenderer shapes) {
-        if (spikeDesign) {
-            if (state == TrapState.ACTIVE) shapes.setColor(0.9f, 0.12f, 0.12f, 1f);
-            else if (state == TrapState.WARNING) shapes.setColor(0.95f, 0.65f, 0.08f, 1f);
-            else shapes.setColor(0.28f, 0.30f, 0.32f, 1f);
-            float width = bounds.width / 4f;
-            for (int i = 0; i < 4; i++) {
-                float left = bounds.x + i * width;
-                shapes.triangle(left, bounds.y, left + width, bounds.y,
-                    left + width / 2f, bounds.y + bounds.height);
-            }
-            return;
-        }
-        if (state == TrapState.SAFE) {
-            shapes.setColor(0.45f, 0.45f, 0.45f, 1f);
-            shapes.rect(bounds.x, bounds.y, bounds.width, Math.min(5f, bounds.height));
-            return;
-        }
-        if (state == TrapState.WARNING) {
-            shapes.setColor(1f, 0.75f, 0.05f, 1f);
-            shapes.rect(bounds.x, bounds.y, bounds.width, bounds.height);
-            // 경고 느낌표. 노란 상태는 아직 안전합니다.
-            shapes.setColor(0.35f, 0.20f, 0f, 1f);
-            shapes.rect(bounds.x + bounds.width * 0.46f, bounds.y + bounds.height * 0.4f,
-                bounds.width * 0.08f, bounds.height * 0.45f);
-            shapes.rect(bounds.x + bounds.width * 0.46f, bounds.y + bounds.height * 0.15f,
-                bounds.width * 0.08f, bounds.height * 0.12f);
-            return;
-        }
-        // 위험 사각형 전체를 채워 삼각형 사이 빈 공간에서도 판정이 명확합니다.
-        shapes.setColor(0.9f, 0.12f, 0.12f, 1f);
-        shapes.rect(bounds.x, bounds.y, bounds.width, bounds.height);
-        shapes.setColor(0.55f, 0.02f, 0.02f, 1f);
-        float spikeWidth = bounds.width / 4f;
-        for (int i = 0; i < 4; i++) {
-            float left = bounds.x + i * spikeWidth;
-            shapes.triangle(left, bounds.y, left + spikeWidth, bounds.y,
-                left + spikeWidth / 2f, bounds.y + bounds.height);
-        }
-    }
 }

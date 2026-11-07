@@ -237,12 +237,14 @@ public final class JuniorSemester2Verification {
             for (boolean attemptJump : new boolean[] {false,true}) {
                 Main game = newGame(); reachUpper(game,false,false);
                 if (index == 4) crossTimed(game,3,2480);
+                Rectangle b = trap(game,index).getBounds();
+                if (attemptJump) move(game,b.x-33); // Deliberately late jump into visible spikes.
                 final int selected = index;
                 waitFor(game, () -> trap(game,selected).getState() == TrapState.ACTIVE
                     && trap(game,selected).getStateElapsedTime() < .08, 5, "Fresh ACTIVE " + index);
-                Rectangle b = trap(game,index).getBounds(); jump = attemptJump;
+                jump = attemptJump;
                 move(game,b.x + (attemptJump ? b.width + 10 : 30));
-                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Active walk/jump cannot bypass " + index);
+                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Walk/late jump contacts visible ACTIVE spikes " + index);
                 check(LifeVerificationSupport.failedTrap(game,index).isDangerousTo(LifeVerificationSupport.failedPlayer(game)), "Active hit " + index);
                 restart(game);
             }
