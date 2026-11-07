@@ -40,6 +40,7 @@ public final class FreshmanLevelVerification {
             SeasonalBackgroundVerification.main(args);
             PlatformOutlineVerification.main(args);
             PixelHudVerification.main(args);
+            PauseMenuVerification.main(args);
             for (int fps : new int[] {30, 60, 120}) {
                 verifyPhysics(fps);
                 verifyRoute(fps, false);
