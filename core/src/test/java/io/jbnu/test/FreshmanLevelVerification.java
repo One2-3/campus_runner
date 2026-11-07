@@ -41,6 +41,7 @@ public final class FreshmanLevelVerification {
             PlatformOutlineVerification.main(args);
             PixelHudVerification.main(args);
             PauseMenuVerification.main(args);
+            GameOverVerification.main(args);
             for (int fps : new int[] {30, 60, 120}) {
                 verifyPhysics(fps);
                 verifyRoute(fps, false);
