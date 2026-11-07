@@ -251,12 +251,14 @@ public final class SeniorSemester1Verification {
                 Main game = newGame(); reachTimed(game,false,false);
                 if (index >= 6) crossTimed(game,5,2470);
                 if (index >= 7) crossTimed(game,6,2690);
+                Rectangle b = trap(game,index).getBounds();
+                if (attemptJump) move(game,b.x-33); // Deliberately late jump into visible spikes.
                 final int selected = index;
                 waitFor(game, () -> trap(game,selected).getState() == TrapState.ACTIVE
                     && trap(game,selected).getStateElapsedTime() < .08, 5, "Fresh ACTIVE " + index);
-                Rectangle b = trap(game,index).getBounds(); jump = attemptJump;
+                jump = attemptJump;
                 move(game,b.x+(attemptJump ? b.width+10 : 30));
-                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Active walk/jump fails " + index);
+                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Walk/late jump contacts visible ACTIVE spikes " + index);
                 check(LifeVerificationSupport.failedTrap(game,index).isDangerousTo(LifeVerificationSupport.failedPlayer(game)), "Actual timed hit " + index);
                 restart(game);
             }
