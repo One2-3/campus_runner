@@ -34,6 +34,7 @@ public class Main extends ApplicationAdapter {
     private PlayerSprites playerSprites;
     private EnemySprites enemySprites;
     private TrapSprites trapSprites;
+    private SeasonalBackgroundRenderer seasonalBackgroundRenderer;
     private final HitFeedback hitFeedback = new HitFeedback();
     private final Matrix4 worldRenderProjection = new Matrix4();
     private boolean waitForHitKeyRelease;
@@ -76,6 +77,7 @@ public class Main extends ApplicationAdapter {
         playerSprites = new PlayerSprites();
         enemySprites = new EnemySprites();
         trapSprites = new TrapSprites();
+        seasonalBackgroundRenderer = new SeasonalBackgroundRenderer();
         fixedPlatformRenderer = new FixedPlatformRenderer();
         movingPlatformRenderer = new MovingPlatformRenderer();
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
@@ -130,8 +132,12 @@ public class Main extends ApplicationAdapter {
             return;
         }
 
+        seasonalBackgroundRenderer.render(batch, currentStageNumber, stage.getWorldWidth(), camera.position.x,
+            Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         viewport.apply();
         Matrix4 worldProjection = getWorldRenderProjection();
+        fixedPlatformRenderer.setPixelsPerWorldUnit(Math.abs(worldProjection.val[Matrix4.M11]) * viewport.getScreenHeight()
+            * Gdx.graphics.getBackBufferHeight() / Gdx.graphics.getHeight() / 2f);
         boolean showHurt = gameState == GameState.DYING || gameState == GameState.GAME_OVER;
         batch.setProjectionMatrix(worldProjection);
         batch.begin();
@@ -215,6 +221,7 @@ public class Main extends ApplicationAdapter {
         uiViewport.apply();
         batch.setProjectionMatrix(uiCamera.combined);
         batch.begin();
+        seasonalBackgroundRenderer.renderHudBackdrop(batch);
         float top = uiViewport.getWorldHeight() - 20f;
         font.draw(batch, "YEAR: " + stage.getYear(), 20f, top);
         font.draw(batch, "SEMESTER: " + stage.getSemester(), 20f, top - 30f);
@@ -635,6 +642,7 @@ public class Main extends ApplicationAdapter {
         playerSprites.dispose();
         enemySprites.dispose();
         trapSprites.dispose();
+        seasonalBackgroundRenderer.dispose();
         fixedPlatformRenderer.dispose();
         movingPlatformRenderer.dispose();
         flagTexture.dispose();
