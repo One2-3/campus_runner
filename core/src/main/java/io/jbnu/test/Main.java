@@ -34,6 +34,8 @@ public class Main extends ApplicationAdapter {
     private PixelHudRenderer pixelHudRenderer;
     private PauseMenuRenderer pauseMenuRenderer;
     private int pauseSelection;
+    private GameOverRenderer gameOverRenderer;
+    private int gameOverSelection;
     private PlayerSprites playerSprites;
     private EnemySprites enemySprites;
     private TrapSprites trapSprites;
@@ -88,6 +90,7 @@ public class Main extends ApplicationAdapter {
         gradeItemTexture.setFilter(Texture.TextureFilter.Nearest,Texture.TextureFilter.Nearest);
         pixelHudRenderer = new PixelHudRenderer(gradeItemTexture);
         pauseMenuRenderer = new PauseMenuRenderer();
+        gameOverRenderer = new GameOverRenderer();
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
@@ -235,6 +238,11 @@ public class Main extends ApplicationAdapter {
 
     private void renderStateUi() {
         if (gameState == GameState.PLAYING) return;
+        if (gameState == GameState.GAME_OVER) {
+            gameOverRenderer.render(batch, uiViewport, gameOverSelection, stage.getYear(), stage.getSemester(),
+                stageScore, collectedItemCount, gradeItems.size, semesterDeathCount);
+            return;
+        }
         if (gameState == GameState.PAUSED) {
             pauseMenuRenderer.render(batch, uiViewport, pauseSelection);
             return;
@@ -242,18 +250,10 @@ public class Main extends ApplicationAdapter {
 
         String title;
         String instruction;
-        String detail = null;
-        String restartNotice = null;
         switch (gameState) {
             case STAGE_CLEAR:
                 title = "YEAR " + stage.getYear() + " - SEMESTER " + stage.getSemester() + " CLEAR";
                 instruction = "PRESS ENTER FOR NEXT SEMESTER";
-                break;
-            case GAME_OVER:
-                title = "GAME OVER";
-                detail = "ALL LIVES LOST";
-                restartNotice = "RESTART FROM YEAR 1, SEMESTER 1";
-                instruction = "PRESS ENTER TO RESTART";
                 break;
             default:
                 return;
@@ -266,22 +266,10 @@ public class Main extends ApplicationAdapter {
         font.draw(batch, textLayout,
             (uiViewport.getWorldWidth() - textLayout.width) / 2f,
             (uiViewport.getWorldHeight() + textLayout.height) / 2f);
-        if (detail != null) {
-            textLayout.setText(font, detail);
-            font.draw(batch, textLayout,
-                (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-                uiViewport.getWorldHeight() / 2f - 40f);
-        }
-        if (restartNotice != null) {
-            textLayout.setText(font, restartNotice);
-            font.draw(batch, textLayout,
-                (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-                uiViewport.getWorldHeight() / 2f - 80f);
-        }
         textLayout.setText(font, instruction);
         font.draw(batch, textLayout,
             (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-            uiViewport.getWorldHeight() / 2f - (restartNotice != null ? 120f : detail == null ? 40f : 80f));
+            uiViewport.getWorldHeight() / 2f - 40f);
         batch.end();
     }
 
@@ -404,6 +392,7 @@ public class Main extends ApplicationAdapter {
     }
 
     private void startNewGame() {
+        gameOverSelection = 0;
         vacationGame = null;
         vacationManager.reset();
         Arrays.fill(completedResults, null);
@@ -490,6 +479,10 @@ public class Main extends ApplicationAdapter {
             updatePauseMenu();
             return; // No physics, item collection or world timers on menu-action frames.
         }
+        if (gameState == GameState.GAME_OVER) {
+            updateGameOverMenu();
+            return;
+        }
         if (gameState == GameState.VACATION_EVENT) {
             MinigameInput input = MinigameInput.read();
             if (vacationGame.isFinished()) {
@@ -505,9 +498,6 @@ public class Main extends ApplicationAdapter {
         // 상태 입력은 물리 갱신 전에 처리하여 정지 상태에서도 동작합니다.
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             switch (gameState) {
-                case GAME_OVER:
-                    startNewGame();
-                    return;
                 case STAGE_CLEAR:
                     loadStage(currentStageNumber + 1);
                     return;
@@ -593,8 +583,27 @@ public class Main extends ApplicationAdapter {
         totalDeathCount++;
         semesterDeaths[currentStageNumber - 1] = semesterDeathCount;
         lives--;
-        if (lives == 0) gameState = GameState.GAME_OVER;
+        if (lives == 0) {
+            gameOverSelection = 0;
+            gameState = GameState.GAME_OVER;
+        }
         else restartStage();
+    }
+
+    private void updateGameOverMenu() {
+        boolean up = Gdx.input.isKeyJustPressed(Input.Keys.UP);
+        boolean down = Gdx.input.isKeyJustPressed(Input.Keys.DOWN);
+        if (up != down) {
+            gameOverSelection = 1 - gameOverSelection;
+            return;
+        }
+        if (!Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) return;
+        boolean title = gameOverSelection == 1;
+        startNewGame(); // Existing GAME_OVER reset: always Stage 1, never the failed semester.
+        if (title) {
+            gameState = GameState.TITLE_SCREEN;
+            waitForHitKeyRelease = true;
+        }
     }
 
     private void updatePauseMenu() {
@@ -666,6 +675,7 @@ public class Main extends ApplicationAdapter {
         flagTexture.dispose();
         pixelHudRenderer.dispose();
         pauseMenuRenderer.dispose();
+        gameOverRenderer.dispose();
         gradeItemTexture.dispose();
         font.dispose();
         endingFont.dispose();
