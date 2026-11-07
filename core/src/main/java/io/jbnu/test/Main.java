@@ -32,6 +32,8 @@ public class Main extends ApplicationAdapter {
     private MovingPlatformRenderer movingPlatformRenderer;
     private Texture gradeItemTexture;
     private PixelHudRenderer pixelHudRenderer;
+    private PauseMenuRenderer pauseMenuRenderer;
+    private int pauseSelection;
     private PlayerSprites playerSprites;
     private EnemySprites enemySprites;
     private TrapSprites trapSprites;
@@ -85,6 +87,7 @@ public class Main extends ApplicationAdapter {
         gradeItemTexture = new Texture(Gdx.files.internal("pixel/items/grade_a_plus_128.png"));
         gradeItemTexture.setFilter(Texture.TextureFilter.Nearest,Texture.TextureFilter.Nearest);
         pixelHudRenderer = new PixelHudRenderer(gradeItemTexture);
+        pauseMenuRenderer = new PauseMenuRenderer();
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
@@ -232,16 +235,16 @@ public class Main extends ApplicationAdapter {
 
     private void renderStateUi() {
         if (gameState == GameState.PLAYING) return;
+        if (gameState == GameState.PAUSED) {
+            pauseMenuRenderer.render(batch, uiViewport, pauseSelection);
+            return;
+        }
 
         String title;
         String instruction;
         String detail = null;
         String restartNotice = null;
         switch (gameState) {
-            case PAUSED:
-                title = "PAUSED";
-                instruction = "Press ESC to Resume";
-                break;
             case STAGE_CLEAR:
                 title = "YEAR " + stage.getYear() + " - SEMESTER " + stage.getSemester() + " CLEAR";
                 instruction = "PRESS ENTER FOR NEXT SEMESTER";
@@ -483,6 +486,10 @@ public class Main extends ApplicationAdapter {
             if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) startNewGame();
             return; // Do not also apply movement, jump, or ESC on the start frame.
         }
+        if (gameState == GameState.PAUSED) {
+            updatePauseMenu();
+            return; // No physics, item collection or world timers on menu-action frames.
+        }
         if (gameState == GameState.VACATION_EVENT) {
             MinigameInput input = MinigameInput.read();
             if (vacationGame.isFinished()) {
@@ -514,10 +521,8 @@ public class Main extends ApplicationAdapter {
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (gameState == GameState.PLAYING) {
+                pauseSelection = 0;
                 gameState = GameState.PAUSED;
-                return;
-            } else if (gameState == GameState.PAUSED) {
-                gameState = GameState.PLAYING;
                 return;
             }
         }
@@ -592,6 +597,37 @@ public class Main extends ApplicationAdapter {
         else restartStage();
     }
 
+    private void updatePauseMenu() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = GameState.PLAYING;
+            return;
+        }
+        boolean up = Gdx.input.isKeyJustPressed(Input.Keys.UP);
+        boolean down = Gdx.input.isKeyJustPressed(Input.Keys.DOWN);
+        if (up || down) {
+            if (up != down) pauseSelection = (pauseSelection + (down ? 1 : 2)) % 3;
+            return; // Navigation and confirmation never execute together.
+        }
+        if (!Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) return;
+        switch (pauseSelection) {
+            case 0:
+                gameState = GameState.PLAYING;
+                break;
+            case 1:
+                restartStage(); // Same reset as a retry, without charging a life/death.
+                waitForHitKeyRelease = true;
+                break;
+            case 2:
+                startNewGame(); // Clear scores, deaths and vacation history before returning.
+                gameState = GameState.TITLE_SCREEN;
+                waitForHitKeyRelease = true;
+                break;
+            default:
+                throw new IllegalStateException("Unknown pause selection: " + pauseSelection);
+        }
+        pauseSelection = 0;
+    }
+
     private boolean isGameplayKeyHeld() {
         return Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)
             || Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyPressed(Input.Keys.ENTER)
@@ -629,6 +665,7 @@ public class Main extends ApplicationAdapter {
         movingPlatformRenderer.dispose();
         flagTexture.dispose();
         pixelHudRenderer.dispose();
+        pauseMenuRenderer.dispose();
         gradeItemTexture.dispose();
         font.dispose();
         endingFont.dispose();
