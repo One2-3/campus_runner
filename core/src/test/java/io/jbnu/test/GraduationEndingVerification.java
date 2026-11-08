@@ -134,6 +134,10 @@ public final class GraduationEndingVerification {
         Path assets = Paths.get("assets/fonts");
         if (!Files.isDirectory(assets)) assets = Paths.get("../assets/fonts");
         String fnt = new String(Files.readAllBytes(assets.resolve("ending-ko.fnt")),StandardCharsets.UTF_8);
+        check(fnt.contains("face=\"Campus Ending Korean\""), "Ending uses renamed OFL derivative");
+        String license = new String(Files.readAllBytes(assets.resolve("ending-ko-OFL.txt")),StandardCharsets.UTF_8);
+        check(license.contains("SIL OPEN FONT LICENSE Version 1.1") && license.contains("NHN Corporation"),
+            "Ending font ships the original copyright and OFL notice");
         Map<Character,Integer> advances = new HashMap<>();
         Matcher matcher = Pattern.compile("char id=(\\d+).*?xadvance=(\\d+)").matcher(fnt);
         while (matcher.find()) advances.put((char)Integer.parseInt(matcher.group(1)),Integer.parseInt(matcher.group(2)));

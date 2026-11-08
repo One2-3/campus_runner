@@ -3,9 +3,15 @@ param(
     [string]$FaceName = "Campus Vacation Korean",
     [string[]]$SourcePaths = @("core/src/main/java/io/jbnu/test/VacationMinigameRenderer.java", "core/src/main/java/io/jbnu/test/VacationUiTheme.java")
 )
-# Regenerate the minigame-only Korean subset, using the OFL source and notice in tools/fonts.
-# No network, FreeType runtime dependency, or change to the existing ending atlas.
+# Shared Korean subset generator, using the existing OFL source and notice in tools/fonts.
+# Defaults regenerate vacation-ko only; the ending wrapper selects a separate output.
+# No network or FreeType runtime dependency.
 Add-Type -AssemblyName System.Drawing
+$fontSource = 'tools/fonts/NanumGothic-Bold.ttf'
+$expectedHash = 'f96298f9fb18e364d2370f4c3ce948ac67a2b61af992d7234bc15c42b033c674'
+if ((Get-FileHash -LiteralPath $fontSource -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expectedHash) {
+    throw 'Font source differs from the recorded OFL source. Verify its provenance before regeneration.'
+}
 $characters = New-Object 'System.Collections.Generic.SortedSet[char]'
 32..126 | ForEach-Object { [void]$characters.Add([char]$_) }
 foreach ($path in $SourcePaths) {
@@ -15,7 +21,7 @@ foreach ($path in $SourcePaths) {
     }
 }
 $collection = New-Object System.Drawing.Text.PrivateFontCollection
-$collection.AddFontFile((Join-Path (Get-Location) 'tools/fonts/NanumGothic-Bold.ttf'))
+$collection.AddFontFile((Join-Path (Get-Location) $fontSource))
 $font = New-Object System.Drawing.Font($collection.Families[0], 24, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
 $rows = [int][Math]::Ceiling($characters.Count / 16.0)
 $bitmap = New-Object System.Drawing.Bitmap(512, ($rows * 36), [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
