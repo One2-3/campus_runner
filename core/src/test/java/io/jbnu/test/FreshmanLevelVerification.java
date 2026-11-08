@@ -66,6 +66,7 @@ public final class FreshmanLevelVerification {
             ServerConnectionVerification.main(args);
             PlayerPixelArtVerification.main(args);
             HitFeedbackVerification.main(args);
+            FinalIntegrationVerification.main(args);
             System.out.println("Freshman verification passed: layout, 4 items / 20 points, "
                 + "30/60/120 fps route, pause, retry, eight semesters and score retention.");
         } finally {
