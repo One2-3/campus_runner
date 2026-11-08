@@ -1,5 +1,11 @@
 # Campus Runner
 
+[**🎮 Campus Runner v1.0.0 다운로드**](https://github.com/One2-3/campus_runner/releases/latest)
+
+- 지원 운영체제: Windows x64
+- Java 별도 설치 불필요
+- ZIP 다운로드 → 압축 해제 → CampusRunner.exe 실행
+
 **학점을 모아 졸업까지 달려라!** 대학 생활을 소재로 한 2D 픽셀 아트 플랫폼 게임입니다.
 
 1학년 1학기부터 4학년 2학기까지 달리며 A+ 학점 별을 모으고, 과제 몬스터와 가시를 피하세요. 방학 활동을 거쳐 최종 GPA에 따른 졸업 엔딩에 도전합니다.
@@ -23,15 +29,11 @@
 
 ## 다운로드 및 실행
 
-**GitHub Releases v1.0.0은 이 작업에서 게시하지 않았습니다.** 로컬 Windows 후보본과 실행 안내를 준비했습니다. [최종 공개 점검표](docs/PUBLIC_RELEASE_REVIEW.md)에 확인된 권한, 사용자 진술에 근거한 이미지 출처, 남은 LGPL 대응 소스·깨끗한 PC 확인 사항을 구분했습니다. 존재하지 않는 ZIP 다운로드 주소를 확정 링크로 제공하지 않습니다.
+상단 다운로드 링크에서 Windows ZIP을 받은 뒤 **전체 압축을 해제**하고, `CampusRunner` 폴더 안의 **CampusRunner.exe**를 실행하세요. Gradle·IDE도 별도로 설치할 필요가 없습니다.
 
-공개 배포가 준비되면 저장소의 [Releases 페이지](https://github.com/One2-3/campus_runner/releases)에서 다음과 같이 실행합니다.
+`app`, `runtime`, `licenses` 폴더를 EXE와 함께 유지하세요. EXE만 따로 옮기거나 ZIP 안에서 직접 실행하지 마세요. macOS·Linux 실행 파일은 이 배포본에 포함하지 않습니다.
 
-1. `CampusRunner-Windows-v1.0.0.zip`을 다운로드합니다.
-2. ZIP 전체를 원하는 폴더에 **압축 해제**합니다.
-3. `CampusRunner` 폴더 안의 **CampusRunner.exe**를 실행합니다.
-
-Windows x64 대상이며 Java·Gradle·IDE를 별도로 설치할 필요가 없습니다. `app`, `runtime`, `licenses` 폴더를 EXE와 함께 유지하세요. EXE만 따로 옮기거나 ZIP 안에서 직접 실행하지 마세요. macOS·Linux 실행 파일은 이 배포본에 포함하지 않습니다.
+배포 권한 및 검증 현황은 [최종 공개 점검표](docs/PUBLIC_RELEASE_REVIEW.md)를 확인하세요.
 
 ## 조작 방법
 
