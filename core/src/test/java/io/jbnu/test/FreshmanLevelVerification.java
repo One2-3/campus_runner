@@ -60,6 +60,7 @@ public final class FreshmanLevelVerification {
             FinalReportVerification.main(args);
             GraduationEndingVerification.main(args);
             TitleScreenVerification.main(args);
+            TitleMenuVerification.main(args);
             VacationSystemVerification.main(args);
             VacationMinigamesVerification.main(args);
             ServerConnectionVerification.main(args);
