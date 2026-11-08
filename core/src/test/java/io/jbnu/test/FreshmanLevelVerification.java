@@ -42,6 +42,7 @@ public final class FreshmanLevelVerification {
             PixelHudVerification.main(args);
             PauseMenuVerification.main(args);
             GameOverVerification.main(args);
+            StageClearVerification.main(args);
             for (int fps : new int[] {30, 60, 120}) {
                 verifyPhysics(fps);
                 verifyRoute(fps, false);
@@ -377,6 +378,7 @@ public final class FreshmanLevelVerification {
             totalMethod.setAccessible(true);
             check((Integer) totalMethod.invoke(game) == LifeVerificationSupport.expectedTotal(game,total), "Total includes all completed semesters");
             if (number == 8) {
+                VacationVerificationSupport.continueClear(game);
                 jump = true; tick(game);
                 check(state(game) == GameState.GRADUATION_ENDING, "Space opens graduation ending after report");
             }

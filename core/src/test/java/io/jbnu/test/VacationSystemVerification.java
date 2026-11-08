@@ -72,8 +72,10 @@ public final class VacationSystemVerification {
         successKey = failureKey = true;
         clear(game);
         int completed = type.getCompletedStage();
+        check(state(game) == GameState.STAGE_CLEAR, "Semester report precedes vacation");
+        VacationVerificationSupport.continueClear(game);
         check(state(game) == GameState.VACATION_EVENT && number(game,"currentStageNumber") == completed
-            && manager(game).getPending() == type, "Correct vacation entered immediately after flag");
+            && manager(game).getPending() == type, "Correct vacation entered after report confirmation");
         StageResult saved = results(game)[completed-1];
         check(saved != null && saved.getItemScore() == 5 && saved.getSurvivalBonus() == 20
             && manager(game).getResult(type) == null, "Semester saved before event, result not yet chosen");
@@ -142,6 +144,7 @@ public final class VacationSystemVerification {
             enter = true; tick(game); assertReset(game);
         } else {
             clear(game);
+            VacationVerificationSupport.continueClear(game);
             if (type != VacationEventType.HACKATHON) {
                 check(state(game) == GameState.VACATION_EVENT
                     && manager(game).modifierForStage(firstStage+1) == PlayerModifier.NONE,
@@ -205,6 +208,7 @@ public final class VacationSystemVerification {
                     "Normal transition passes through required vacation only");
             }
         }
+        VacationVerificationSupport.continueClear(game);
         FinalReport report = (FinalReport)REPORT.invoke(game);
         check(report.getTotalItemScore() == 305 && report.getTotalSurvivalBonus() == 160 && report.getFinalScore() == 465
             && report.getGpa() == 4.50 && report.getTotalDeathCount() == 0, "All success or all failure still permits maximum 465/GPA 4.50");

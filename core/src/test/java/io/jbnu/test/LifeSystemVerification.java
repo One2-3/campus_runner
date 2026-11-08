@@ -285,6 +285,7 @@ public final class LifeSystemVerification {
     private static void clear(Main game) throws Exception {
         Rectangle flag = (Rectangle)get(game,"flag"); player(game).reset(flag.x,flag.y); tick(game);
         check(state(game) == VacationVerificationSupport.clearState(number(game,"currentStageNumber")), "Normal flag completion");
+        if (number(game,"currentStageNumber") == 8) VacationVerificationSupport.continueClear(game);
     }
     private static void dieByFall(Main game) throws Exception { player(game).reset(80,-150); tick(game); }
     private static boolean grounded(Main game) throws Exception { return (Boolean)field(Player.class,"grounded").get(player(game)); }

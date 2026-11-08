@@ -165,7 +165,7 @@ public final class Semester2LevelVerification {
         walk(game, 2370);
         leap(game, 2490, 320);
         walk(game, 2540);
-        check(state(game) == GameState.VACATION_EVENT, "Stage 2 flag opens cafe vacation");
+        check(state(game) == GameState.STAGE_CLEAR, "Stage 2 flag opens semester report before cafe");
         int count = partial ? 4 : 5;
         hud(game, count, count * 5);
         Array<?> items = (Array<?>) get(game, "gradeItems");
