@@ -34,6 +34,7 @@ public class Main extends ApplicationAdapter {
     private PixelHudRenderer pixelHudRenderer;
     private PauseMenuRenderer pauseMenuRenderer;
     private int pauseSelection;
+    private GameState pauseReturnState = GameState.PLAYING;
     private GameOverRenderer gameOverRenderer;
     private StageClearRenderer stageClearRenderer;
     private int gameOverSelection;
@@ -112,7 +113,7 @@ public class Main extends ApplicationAdapter {
         finalReportRenderer = new FinalReportRenderer(resultCanvas);
         endingRenderer = new EndingRenderer(resultCanvas);
         textLayout = new GlyphLayout();
-        vacationRenderer = new VacationMinigameRenderer(batch, itemRenderer, font, uiViewport, uiCamera);
+        vacationRenderer = new VacationMinigameRenderer(batch, itemRenderer, uiViewport, uiCamera);
 
     }
 
@@ -140,8 +141,10 @@ public class Main extends ApplicationAdapter {
             else renderGraduationEnding(getFinalReport());
             return;
         }
-        if (gameState == GameState.VACATION_EVENT) {
+        if (gameState == GameState.VACATION_EVENT
+            || (gameState == GameState.PAUSED && pauseReturnState == GameState.VACATION_EVENT)) {
             renderVacationEvent();
+            if (gameState == GameState.PAUSED) pauseMenuRenderer.render(batch, uiViewport, pauseSelection);
             return;
         }
 
@@ -280,6 +283,7 @@ public class Main extends ApplicationAdapter {
     }
 
     private void startNewGame() {
+        pauseReturnState = GameState.PLAYING;
         gameOverSelection = 0;
         vacationGame = null;
         vacationManager.reset();
@@ -299,6 +303,7 @@ public class Main extends ApplicationAdapter {
     }
 
     private void resetStageRuntime(int stageNumber) {
+        pauseReturnState = GameState.PLAYING;
         hitFeedback.reset();
         waitForHitKeyRelease = false;
         stage = StageFactory.createStage(stageNumber);
@@ -372,6 +377,12 @@ public class Main extends ApplicationAdapter {
             return;
         }
         if (gameState == GameState.VACATION_EVENT) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                pauseSelection = 0;
+                pauseReturnState = GameState.VACATION_EVENT;
+                gameState = GameState.PAUSED;
+                return;
+            }
             MinigameInput input = MinigameInput.read();
             if (vacationGame.isFinished()) {
                 if (input.isPressed(Input.Keys.ENTER)) completeVacationEvent(vacationGame.getType(), vacationGame.isSuccess());
@@ -400,6 +411,7 @@ public class Main extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (gameState == GameState.PLAYING) {
                 pauseSelection = 0;
+                pauseReturnState = GameState.PLAYING;
                 gameState = GameState.PAUSED;
                 return;
             }
@@ -504,7 +516,7 @@ public class Main extends ApplicationAdapter {
 
     private void updatePauseMenu() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
-            gameState = GameState.PLAYING;
+            gameState = pauseReturnState;
             return;
         }
         boolean up = Gdx.input.isKeyJustPressed(Input.Keys.UP);
@@ -516,10 +528,14 @@ public class Main extends ApplicationAdapter {
         if (!Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) return;
         switch (pauseSelection) {
             case 0:
-                gameState = GameState.PLAYING;
+                gameState = pauseReturnState;
                 break;
             case 1:
-                restartStage(); // Same reset as a retry, without charging a life/death.
+                if (pauseReturnState == GameState.VACATION_EVENT) {
+                    // Pending vacation and saved semester results remain untouched; reward is not confirmed here.
+                    vacationGame = VacationMinigame.create(vacationManager.getPending());
+                    gameState = GameState.VACATION_EVENT;
+                } else restartStage(); // Same stage reset as a retry, without charging a life/death.
                 waitForHitKeyRelease = true;
                 break;
             case 2:
@@ -561,6 +577,7 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose() {
+        vacationRenderer.dispose();
         batch.dispose();
         playerSprites.dispose();
         enemySprites.dispose();
