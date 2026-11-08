@@ -1,24 +1,82 @@
 # Campus Runner — 최종 성적표
 
+## STEP 10-10 픽셀 UI (2026-11-08)
+
+`FinalReportRenderer`와 `EndingRenderer`로 렌더링을 분리했다.
+두 화면은 `PixelResultCanvas`의 공유 Texture·영어/한글 폰트를 사용한다.
+점수/등급 모델인 FinalReport, StageResult, GraduationEnding과 Main의 입력/상태 전환은 수정하지 않았다.
+
+- 크림 `#F5E8CB`, 테두리 `#594738`, 글씨 `#493B32`, 파스텔 노랑 강조.
+- 중앙 704×536 논리 패널. 기존 800×600 FitViewport로 세 해상도에 동일 비율 적용.
+- FINAL REPORT 제목, 8학기별 아이템/보너스/최종 점수, 전체 아이템 점수/305,
+  생존 보너스/160, 최종 점수/465, GPA/4.50, SCORE RATE, 전체 수집량, TOTAL DEATHS, 기존 엔딩 등급 표시.
+- 표 행 간격 24, 수치 오른쪽 정렬, 교차 행 배경, 최종 점수 강조 행.
+- 전체 수집량은 **저장된 StageResult.getCollectedItemCount()의 합**이다.
+  최대 수집량은 기존 학기별 아이템 최대 점수와 GradeItem.DEFAULT_SCORE(5)에서 얻는 61개다.
+  UI용 개수만 합산하며 점수 모델이나 저장 기록을 수정하지 않는다.
+- 마지막 학기의 기존 배경을 그대로 렌더링한 뒤 alpha 0.60 오버레이를 적용한다.
+  배경 PNG·보정 셰이더·카메라 값은 수정하지 않으며 월드 오브젝트는 업데이트하지 않는다.
+- 기존 한글 폰트 리소스의 공백 xadvance가 0인 문제는 새 UI 폰트 인스턴스에서만 10으로 보정했다.
+  원본 fnt/PNG와 다른 화면의 폰트는 변경하지 않았다.
+- 기존 폰트를 늘려 쓰는 대신 별도 폰트를 공유하므로 HUD·방학·기타 메뉴 폰트 상태에 영향을 주지 않는다.
+- SpriteBatch projection/transform·셰이더·색상·블렌딩 상태 복원, Nearest 유지.
+  Main.dispose()에서 공유 1×1 Texture·영어/한글 폰트를 한 번만 해제한다.
+
+현재 흐름은 Stage 8 깃발 → 결과 저장 → STAGE_CLEAR → Enter → GAME_COMPLETE 성적표
+→ Space → GRADUATION_ENDING → Enter → Stage 1 새 게임이다. STEP 10-9에서 승인된 확인 단계를 유지했다.
+
+### 검증 결과
+
+- 최종 `.\gradlew.bat build` 종료 코드 0.
+- 기존 8학기 실제 입력 경로·학기 클리어 확인·목숨·방학 미니게임·성적표·GPA·5개 엔딩의 30/60/120fps 회귀 검증 통과.
+- 신규 FinalPixelUiVerification: 실제 저장 수집량 합산, 부분 수집, 최대 61개,
+  305+160=465, GPA 4.50 표시, 모든 정수 점수 0~465의 기존 등급 기준 검증 통과.
+- 기존 최종 성적표 검증의 8행 합산·부분 수집·사망 보너스·최대점·동결·전체 재시작 검증 유지.
+- 실제 LWJGL GUI에서 5개 등급 × 3해상도 × 성적표/엔딩의 기존 30장·신규 30장 캡처.
+- 800×600 성적표와 엔딩, 1280×720 부분 수집 성적표, 다른 해상도의 등급별 대표 화면을 직접 확인했다.
+  필수 항목·8개 행·한글 메시지에 겹침/잘림 없음.
+- GUI에서 Stage 8 STAGE_CLEAR의 Enter → 성적표 → Space → 엔딩 → Enter 전체 초기화 확인.
+  Space+Enter 동시 입력과 누른 키 유지로 즉시 재시작하지 않음, 월드/함정 시간 정지 확인.
+- 배경 보정 셰이더가 설정된 호출에서도 UI 종료 후 셰이더·행렬·색상·블렌딩 복원 확인.
+- 공유 Texture/font atlas의 Nearest와 종료 후 GL handle 0 확인.
+
+GUI는 저장 결과 fixture(465/400/345/250/100점)를 사용했다.
+실제 이동·점프로 8학기를 완료하는 검증은 기존 회귀 체인이 담당한다.
+남은 GUI 문제는 확인 범위에서 발견되지 않았다.
+
+### 캡처와 변경 파일
+
+- [성적표 전후 비교](../build/final-pixel-gui/report-before-after-800x600.png)
+- [800×600 만점 성적표](../build/final-pixel-gui/after-report-highest_honors-800x600.png)
+- [1280×720 부분 수집 성적표](../build/final-pixel-gui/after-report-honors-1280x720.png)
+- [1920×1080 만점 성적표](../build/final-pixel-gui/after-report-highest_honors-1920x1080.png)
+- [5개 엔딩 모음](../build/final-pixel-gui/five-endings.png)
+
+GUI 진단 코드: `build/final-pixel-gui/FinalPixelGuiSmoke.java`. build 자료는 Git 추적 대상이 아니다.
+변경 파일은 Main.java, FinalReportRenderer.java, EndingRenderer.java, PixelResultCanvas.java,
+FinalPixelUiVerification.java, FreshmanLevelVerification.java 및 이 문서와 GRADUATION_ENDINGS.md다.
+기존 HUD·PAUSED·GAME_OVER·STAGE_CLEAR 디자인, 원본 에셋, 게임 규칙은 수정하지 않았다.
+Git commit/push/merge는 실행하지 않았다.
+
 ## 진입과 표시 구조
 
-Stage 8의 깃발에 도달하면 기존 `recordStageResult()`가 마지막 학기 결과를 저장한 뒤
-`GAME_COMPLETE`로 전환한다. 결과 슬롯이 비어 있을 때만 저장하는 기존 중복 방지 규칙을 유지한다.
+Stage 8의 깃발에 도달하면 기존 `recordStageResult()`가 마지막 학기 결과를 저장하고 STAGE_CLEAR를 표시한다.
+Enter 확인 후 `GAME_COMPLETE`로 전환한다. 결과 슬롯이 비어 있을 때만 저장하는 기존 중복 방지 규칙을 유지한다.
 `Main.render()`는 이 상태에서 월드·플레이 HUD 대신 `renderFinalReport()`를 호출한다.
-제목은 FINAL ACADEMIC REPORT, 부제는 CAMPUS RUNNER다.
+제목은 FINAL REPORT, 부제는 CAMPUS RUNNER / 8 SEMESTERS다.
 
 `FinalReport`는 렌더링과 분리된 읽기 전용 집계 객체다. 8개 StageResult 참조 배열을 복사하고,
 누락되거나 순서가 잘못된 결과를 거부한다. StageResult 자체는 기존 불변 객체를 재사용한다.
 `Main.getFinalReport()`는 GAME_COMPLETE 및 GRADUATION_ENDING에서 집계를 제공한다. 별도 캐시를 두지 않아
 새 게임 이후 이전 성적표를 표시할 경로가 없다.
 
-기존 BitmapFont·SpriteBatch·ShapeRenderer와 800×600 UI FitViewport를 사용한다.
+기존 BitmapFont·SpriteBatch와 800×600 UI FitViewport를 사용한다.
 표에는 학기, 아이템 점수/최대, 생존 보너스/20, 최종 점수/학기 최대를 표시한다.
-열 숫자는 오른쪽 정렬하고, 행 간격은 28이며 교차 배경으로 구분한다.
-표 아래에는 두 열로 최종 요약을 표시하고, TOTAL DEATHS는 짙은 빨강으로 강조한다.
+열 숫자는 오른쪽 정렬하고, 행 간격은 24이며 교차 배경으로 구분한다.
+표 아래에는 두 열로 최종 요약을 표시하고, FINAL SCORE를 노랑 행으로 강조한다.
 제목·부제·Space 안내는 가운데 정렬한다. 창 크기 변경 시 기존 FitViewport가
 전체 800×600 화면을 같은 비율로 축소·확대하고 여백을 두므로 배치 좌표는 유지된다.
-성적표 렌더링 후 폰트 크기와 색상을 기존 HUD 설정으로 복원한다.
+공유 캔버스는 HUD 폰트를 사용하지 않으며, 렌더링 후 배치 상태를 복원한다.
 
 ## 점수 집계
 

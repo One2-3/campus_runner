@@ -43,6 +43,7 @@ public final class JuniorSemester2Verification {
             for (int i = 0; i < 5; i++) check(results(game)[i] == prior[i], "Retry preserves prior result " + i);
             route(game, false, true);
             enter = true; tick(game);
+            VacationVerificationSupport.finishIfPending(game, false);
             check(number(game, "currentStageNumber") == 7 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game)
                 && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 10,
                 "Stage 7 loads ten items");
@@ -236,12 +237,14 @@ public final class JuniorSemester2Verification {
             for (boolean attemptJump : new boolean[] {false,true}) {
                 Main game = newGame(); reachUpper(game,false,false);
                 if (index == 4) crossTimed(game,3,2480);
+                Rectangle b = trap(game,index).getBounds();
+                if (attemptJump) move(game,b.x-33); // Deliberately late jump into visible spikes.
                 final int selected = index;
                 waitFor(game, () -> trap(game,selected).getState() == TrapState.ACTIVE
                     && trap(game,selected).getStateElapsedTime() < .08, 5, "Fresh ACTIVE " + index);
-                Rectangle b = trap(game,index).getBounds(); jump = attemptJump;
+                jump = attemptJump;
                 move(game,b.x + (attemptJump ? b.width + 10 : 30));
-                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Active walk/jump cannot bypass " + index);
+                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Walk/late jump contacts visible ACTIVE spikes " + index);
                 check(LifeVerificationSupport.failedTrap(game,index).isDangerousTo(LifeVerificationSupport.failedPlayer(game)), "Active hit " + index);
                 restart(game);
             }

@@ -7,32 +7,54 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
+import com.badlogic.gdx.math.Matrix4;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
 import java.util.Arrays;
-import java.util.Locale;
+
 
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
 public class Main extends ApplicationAdapter {
+    /** Base starting lives; a semester may receive an extra vacation life. */
     public static final int MAX_LIVES = 5;
 
     private SpriteBatch batch;
-    private Texture playerTexture, blockTexture, flagTexture;
+    private Texture flagTexture;
+    private FixedPlatformRenderer fixedPlatformRenderer;
+    private MovingPlatformRenderer movingPlatformRenderer;
+    private Texture gradeItemTexture;
+    private PixelHudRenderer pixelHudRenderer;
+    private PauseMenuRenderer pauseMenuRenderer;
+    private int pauseSelection;
+    private GameState pauseReturnState = GameState.PLAYING;
+    private GameOverRenderer gameOverRenderer;
+    private StageClearRenderer stageClearRenderer;
+    private int gameOverSelection;
+    private PlayerSprites playerSprites;
+    private EnemySprites enemySprites;
+    private TrapSprites trapSprites;
+    private SeasonalBackgroundRenderer seasonalBackgroundRenderer;
+    private final HitFeedback hitFeedback = new HitFeedback();
+    private final Matrix4 worldRenderProjection = new Matrix4();
+    private boolean waitForHitKeyRelease;
     private OrthographicCamera camera;
     private FitViewport viewport;
     private OrthographicCamera uiCamera;
     private FitViewport uiViewport;
     private BitmapFont font;
-    private BitmapFont endingFont;
-    private GlyphLayout textLayout;
+    private TitleScreenRenderer titleScreenRenderer;
+    private int titleSelection;
+    private boolean titleHelpVisible;
+    private PixelResultCanvas resultCanvas;
+    private FinalReportRenderer finalReportRenderer;
+    private EndingRenderer endingRenderer;
     private ShapeRenderer itemRenderer;
 
     private Player player;
@@ -46,6 +68,10 @@ public class Main extends ApplicationAdapter {
     private int collectedItemCount;
     private int stageScore;
     private int lives = MAX_LIVES;
+    private int semesterMaxLives = MAX_LIVES;
+    private final VacationManager vacationManager = new VacationManager();
+    private VacationMinigame vacationGame;
+    private VacationMinigameRenderer vacationRenderer;
     private int semesterDeathCount;
     private int totalDeathCount;
     private final int[] semesterDeaths = new int[StageFactory.STAGE_COUNT];
@@ -58,9 +84,19 @@ public class Main extends ApplicationAdapter {
     public void create() {
         batch = new SpriteBatch();
         itemRenderer = new ShapeRenderer();
-        playerTexture = new Texture(Gdx.files.internal("player.png"));
-        blockTexture = new Texture(Gdx.files.internal("block.png"));
+        playerSprites = new PlayerSprites();
+        enemySprites = new EnemySprites();
+        trapSprites = new TrapSprites();
+        seasonalBackgroundRenderer = new SeasonalBackgroundRenderer();
+        fixedPlatformRenderer = new FixedPlatformRenderer();
+        movingPlatformRenderer = new MovingPlatformRenderer();
         flagTexture = new Texture(Gdx.files.internal("flag.png"));
+        gradeItemTexture = new Texture(Gdx.files.internal("pixel/items/grade_a_plus_128.png"));
+        gradeItemTexture.setFilter(Texture.TextureFilter.Nearest,Texture.TextureFilter.Nearest);
+        pixelHudRenderer = new PixelHudRenderer(gradeItemTexture);
+        pauseMenuRenderer = new PauseMenuRenderer();
+        gameOverRenderer = new GameOverRenderer();
+        stageClearRenderer = new StageClearRenderer();
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
@@ -74,8 +110,11 @@ public class Main extends ApplicationAdapter {
         font = new BitmapFont();
         font.setColor(Color.BLACK);
         font.getData().setScale(2f);
-        endingFont = new BitmapFont(Gdx.files.internal("fonts/ending-ko.fnt"));
-        textLayout = new GlyphLayout();
+        titleScreenRenderer = new TitleScreenRenderer(seasonalBackgroundRenderer, gradeItemTexture, font);
+        resultCanvas = new PixelResultCanvas();
+        finalReportRenderer = new FinalReportRenderer(resultCanvas);
+        endingRenderer = new EndingRenderer(resultCanvas);
+        vacationRenderer = new VacationMinigameRenderer(batch, itemRenderer, uiViewport, uiCamera);
 
     }
 
@@ -96,41 +135,51 @@ public class Main extends ApplicationAdapter {
 
         ScreenUtils.clear(1f,1f,1f,1f);
 
-        if (gameState == GameState.GAME_COMPLETE) {
-            renderFinalReport(getFinalReport());
+        if (gameState == GameState.GAME_COMPLETE || gameState == GameState.GRADUATION_ENDING) {
+            seasonalBackgroundRenderer.render(batch, currentStageNumber, stage.getWorldWidth(), camera.position.x,
+                Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+            if (gameState == GameState.GAME_COMPLETE) renderFinalReport(getFinalReport());
+            else renderGraduationEnding(getFinalReport());
             return;
         }
-        if (gameState == GameState.GRADUATION_ENDING) {
-            renderGraduationEnding(getFinalReport());
+        if (gameState == GameState.VACATION_EVENT
+            || (gameState == GameState.PAUSED && pauseReturnState == GameState.VACATION_EVENT)) {
+            renderVacationEvent();
+            if (gameState == GameState.PAUSED) pauseMenuRenderer.render(batch, uiViewport, pauseSelection);
             return;
         }
 
+        seasonalBackgroundRenderer.render(batch, currentStageNumber, stage.getWorldWidth(), camera.position.x,
+            Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         viewport.apply();
-        batch.setProjectionMatrix(camera.combined);
+        Matrix4 worldProjection = getWorldRenderProjection();
+        fixedPlatformRenderer.setPixelsPerWorldUnit(Math.abs(worldProjection.val[Matrix4.M11]) * viewport.getScreenHeight()
+            * Gdx.graphics.getBackBufferHeight() / Gdx.graphics.getHeight() / 2f);
+        boolean showHurt = gameState == GameState.DYING || gameState == GameState.GAME_OVER;
+        batch.setProjectionMatrix(worldProjection);
         batch.begin();
         for (Rectangle block : blocks) {
-            batch.draw(blockTexture, block.x, block.y, block.width, block.height);
+            fixedPlatformRenderer.render(batch, block);
+        }
+        for (MovingPlatform platform : movingPlatforms) {
+            movingPlatformRenderer.render(batch, platform);
         }
         batch.draw(flagTexture, flag.x, flag.y, flag.width, flag.height);
-        player.render(batch, playerTexture);
-        batch.end();
+        if (!showHurt) playerSprites.render(batch, player, false);
 
-        // SpriteBatch와 ShapeRenderer는 동시에 begin하지 않습니다.
-        itemRenderer.setProjectionMatrix(camera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        for (MovingPlatform platform : movingPlatforms) {
-            platform.render(itemRenderer);
-        }
         for (TimedTrap trap : timedTraps) {
-            trap.render(itemRenderer);
+            trapSprites.render(batch, trap);
         }
         for (PatrollingEnemy enemy : enemies) {
-            enemy.render(itemRenderer);
+            enemySprites.render(batch, enemy);
         }
         for (GradeItem item : gradeItems) {
-            item.render(itemRenderer);
+            item.render(batch, gradeItemTexture);
         }
-        itemRenderer.end();
+        if (showHurt) {
+            playerSprites.render(batch, player, true);
+        }
+        batch.end();
 
         renderHud();
         renderStateUi();
@@ -138,129 +187,35 @@ public class Main extends ApplicationAdapter {
     }
 
     private void renderTitleScreen() {
-        ScreenUtils.clear(0.035f, 0.06f, 0.13f, 1f);
-        uiViewport.apply();
-        itemRenderer.setProjectionMatrix(uiCamera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        // A simple mortarboard and tassel, drawn entirely in UI coordinates.
-        itemRenderer.setColor(0.98f, 0.81f, 0.36f, 1f);
-        itemRenderer.triangle(344f, 530f, 400f, 550f, 456f, 530f);
-        itemRenderer.triangle(344f, 530f, 456f, 530f, 400f, 510f);
-        itemRenderer.rect(378f, 492f, 44f, 17f);
-        itemRenderer.rect(453f, 495f, 3f, 35f);
-        itemRenderer.circle(454.5f, 493f, 4f, 16);
-        itemRenderer.setColor(0.085f, 0.13f, 0.22f, 1f);
-        itemRenderer.rect(150f, 160f, 500f, 136f);
-        // Campus silhouettes leave the central text area clear.
-        itemRenderer.rect(28f, 0f, 92f, 82f);
-        itemRenderer.triangle(18f, 82f, 74f, 112f, 130f, 82f);
-        itemRenderer.rect(680f, 0f, 92f, 82f);
-        itemRenderer.triangle(670f, 82f, 726f, 112f, 782f, 82f);
-        itemRenderer.setColor(0.98f, 0.81f, 0.36f, 1f);
-        itemRenderer.rect(180f, 295f, 440f, 2f);
-        itemRenderer.end();
-
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        font.setColor(0.98f, 0.81f, 0.36f, 1f);
-        font.getData().setScale(3.2f);
-        drawReportCentered("CAMPUS RUNNER", 460f);
-        font.setColor(0.76f, 0.83f, 0.94f, 1f);
-        font.getData().setScale(1.4f);
-        drawReportCentered("8 SEMESTERS TO GRADUATION", 401f);
-        font.getData().setScale(1.15f);
-        drawReportCentered("Collect credits. Survive semesters. Graduate!", 354f);
-        font.setColor(0.98f, 0.81f, 0.36f, 1f);
-        font.getData().setScale(1.2f);
-        drawReportCentered("CONTROLS", 279f);
-        font.setColor(0.9f, 0.94f, 1f, 1f);
-        font.getData().setScale(1.1f);
-        drawReportCentered("LEFT / RIGHT ARROWS  -  MOVE", 245f);
-        drawReportCentered("SPACE  -  JUMP", 217f);
-        drawReportCentered("ESC  -  PAUSE / RESUME", 189f);
-        font.getData().setScale(1.6f);
-        drawReportCentered("PRESS ENTER TO START", 116f);
-        batch.end();
-        font.getData().setScale(2f);
-        font.setColor(Color.BLACK);
+        titleScreenRenderer.render(batch, uiViewport, titleSelection, titleHelpVisible);
     }
 
     private void renderHud() {
         uiViewport.apply();
         batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        float top = uiViewport.getWorldHeight() - 20f;
-        font.draw(batch, "YEAR: " + stage.getYear(), 20f, top);
-        font.draw(batch, "SEMESTER: " + stage.getSemester(), 20f, top - 30f);
-        font.draw(batch, "ITEMS: " + collectedItemCount + " / " + gradeItems.size,
-            20f, top - 60f);
-        font.draw(batch, "SCORE: " + stageScore, 20f, top - 90f);
-        font.draw(batch, "LIVES: " + lives + " / " + MAX_LIVES, 520f, top);
-        batch.end();
-
-        itemRenderer.setProjectionMatrix(uiCamera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        for (int i = 0; i < MAX_LIVES; i++) {
-            float x = 532f + i * 36f;
-            float y = top - 50f;
-            itemRenderer.setColor(i < lives ? Color.RED : Color.LIGHT_GRAY);
-            itemRenderer.circle(x - 6f, y + 12f, 6f, 16);
-            itemRenderer.circle(x + 6f, y + 12f, 6f, 16);
-            itemRenderer.triangle(x - 12f, y + 12f, x + 12f, y + 12f, x, y);
-        }
-        itemRenderer.end();
+        pixelHudRenderer.render(batch, uiViewport.getWorldWidth(), uiViewport.getWorldHeight(),
+            stage.getYear(), stage.getSemester(), stageScore, collectedItemCount, gradeItems.size,
+            lives, semesterMaxLives);
+    }
+    private void renderVacationEvent() {
+        vacationRenderer.render(vacationGame);
     }
 
     private void renderStateUi() {
         if (gameState == GameState.PLAYING) return;
-
-        String title;
-        String instruction;
-        String detail = null;
-        String restartNotice = null;
-        switch (gameState) {
-            case PAUSED:
-                title = "PAUSED";
-                instruction = "Press ESC to Resume";
-                break;
-            case STAGE_CLEAR:
-                title = "YEAR " + stage.getYear() + " - SEMESTER " + stage.getSemester() + " CLEAR";
-                instruction = "PRESS ENTER FOR NEXT SEMESTER";
-                break;
-            case GAME_OVER:
-                title = "GAME OVER";
-                detail = "ALL LIVES LOST";
-                restartNotice = "RESTART FROM YEAR 1, SEMESTER 1";
-                instruction = "PRESS ENTER TO RESTART";
-                break;
-            default:
-                return;
+        if (gameState == GameState.GAME_OVER) {
+            gameOverRenderer.render(batch, uiViewport, gameOverSelection, stage.getYear(), stage.getSemester(),
+                stageScore, collectedItemCount, gradeItems.size, semesterDeathCount);
+            return;
+        }
+        if (gameState == GameState.PAUSED) {
+            pauseMenuRenderer.render(batch, uiViewport, pauseSelection);
+            return;
         }
 
-        uiViewport.apply();
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        textLayout.setText(font, title);
-        font.draw(batch, textLayout,
-            (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-            (uiViewport.getWorldHeight() + textLayout.height) / 2f);
-        if (detail != null) {
-            textLayout.setText(font, detail);
-            font.draw(batch, textLayout,
-                (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-                uiViewport.getWorldHeight() / 2f - 40f);
+        if (gameState == GameState.STAGE_CLEAR) {
+            stageClearRenderer.render(batch, uiViewport, completedResults[currentStageNumber - 1], gradeItems.size);
         }
-        if (restartNotice != null) {
-            textLayout.setText(font, restartNotice);
-            font.draw(batch, textLayout,
-                (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-                uiViewport.getWorldHeight() / 2f - 80f);
-        }
-        textLayout.setText(font, instruction);
-        font.draw(batch, textLayout,
-            (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-            uiViewport.getWorldHeight() / 2f - (restartNotice != null ? 120f : detail == null ? 40f : 80f));
-        batch.end();
     }
 
     private FinalReport getFinalReport() {
@@ -269,119 +224,23 @@ public class Main extends ApplicationAdapter {
     }
 
     private void renderFinalReport(FinalReport report) {
-        uiViewport.apply();
-        itemRenderer.setProjectionMatrix(uiCamera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        itemRenderer.setColor(0.94f, 0.96f, 0.98f, 1f);
-        itemRenderer.rect(32f, 96f, 736f, 426f);
-        itemRenderer.setColor(0.82f, 0.88f, 0.93f, 1f);
-        itemRenderer.rect(50f, 478f, 700f, 32f);
-        for (int i = 0; i < report.getSemesterCount(); i += 2) {
-            itemRenderer.setColor(0.88f, 0.92f, 0.95f, 1f);
-            itemRenderer.rect(50f, 450f - i * 28f, 700f, 28f);
-        }
-        itemRenderer.setColor(0.3f, 0.4f, 0.5f, 1f);
-        itemRenderer.rect(50f, 244f, 700f, 2f);
-        itemRenderer.end();
-
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        font.setColor(0.1f, 0.2f, 0.3f, 1f);
-        font.getData().setScale(2f);
-        drawReportCentered("FINAL ACADEMIC REPORT", 574f);
-        font.getData().setScale(1.2f);
-        drawReportCentered("CAMPUS RUNNER", 540f);
-        font.getData().setScale(1.1f);
-        font.draw(batch, "SEMESTER", 70f, 500f);
-        drawReportRight("ITEM SCORE", 370f, 500f);
-        drawReportRight("SURVIVAL BONUS", 570f, 500f);
-        drawReportRight("FINAL", 730f, 500f);
-        for (int i = 0; i < report.getSemesterCount(); i++) {
-            StageResult result = report.getSemester(i);
-            float y = 472f - i * 28f;
-            font.draw(batch, (i / 2 + 1) + "-" + (i % 2 + 1), 95f, y);
-            drawReportRight(result.getItemScore() + " / " + report.getItemMaximum(i), 370f, y);
-            drawReportRight(result.getSurvivalBonus() + " / 20", 570f, y);
-            drawReportRight(result.getFinalScore() + " / " + (report.getItemMaximum(i) + 20), 730f, y);
-        }
-        font.draw(batch, "TOTAL ITEM SCORE: " + report.getTotalItemScore() + " / " + FinalReport.MAX_ITEM_SCORE, 64f, 222f);
-        font.draw(batch, "TOTAL SURVIVAL BONUS: " + report.getTotalSurvivalBonus() + " / " + FinalReport.MAX_SURVIVAL_BONUS, 64f, 194f);
-        font.getData().setScale(1.4f);
-        font.draw(batch, "FINAL SCORE: " + report.getFinalScore() + " / " + FinalReport.MAX_FINAL_SCORE, 64f, 150f);
-        font.setColor(0.65f, 0.15f, 0.15f, 1f);
-        font.getData().setScale(1.2f);
-        font.draw(batch, "TOTAL DEATHS: " + report.getTotalDeathCount(), 490f, 222f);
-        font.setColor(0.1f, 0.2f, 0.3f, 1f);
-        font.draw(batch, String.format(Locale.ROOT, "GPA: %.2f / 4.50", report.getGpa()), 490f, 186f);
-        font.getData().setScale(1.1f);
-        font.draw(batch, String.format(Locale.ROOT, "SCORE RATE: %.2f%%", report.getScoreRate()), 490f, 150f);
-        drawReportCentered("PRESS SPACE TO VIEW GRADUATION RESULT", 60f);
-        batch.end();
-        font.getData().setScale(2f);
-        font.setColor(Color.BLACK);
+        finalReportRenderer.render(batch, uiViewport, report);
     }
 
     private void renderGraduationEnding(FinalReport report) {
-        GraduationEnding ending = report.getEnding();
-        int rgb = ending.getColorRgb();
-        Color accent = new Color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, 1f);
-        uiViewport.apply();
-        itemRenderer.setProjectionMatrix(uiCamera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        itemRenderer.setColor(0.94f, 0.96f, 0.98f, 1f);
-        itemRenderer.rect(32f, 96f, 736f, 426f);
-        itemRenderer.setColor(accent);
-        itemRenderer.rect(32f, 514f, 736f, 8f);
-        itemRenderer.end();
-
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        font.setColor(0.1f, 0.2f, 0.3f, 1f);
-        font.getData().setScale(1.2f);
-        drawReportCentered("CAMPUS RUNNER", 570f);
-        font.getData().setScale(2f);
-        drawReportCentered("GRADUATION RESULT", 490f);
-        endingFont.setColor(accent);
-        endingFont.getData().setScale(1.5f);
-        drawEndingCentered(ending.getTitle(), 432f);
-        font.setColor(0.1f, 0.2f, 0.3f, 1f);
-        font.getData().setScale(1.4f);
-        drawReportCentered(String.format(Locale.ROOT, "GPA: %.2f / 4.50", report.getGpa()), 366f);
-        drawReportCentered("FINAL SCORE: " + report.getFinalScore() + " / " + FinalReport.MAX_FINAL_SCORE, 328f);
-        drawReportCentered("TOTAL DEATHS: " + report.getTotalDeathCount(), 290f);
-        endingFont.setColor(0.1f, 0.2f, 0.3f, 1f);
-        endingFont.getData().setScale(0.85f);
-        drawEndingCentered(ending.getMessage(), 236f);
-        drawEndingCentered(ending.getDetail(), 198f);
-        endingFont.getData().setScale(0.65f);
-        drawEndingCentered(GraduationEnding.PRECISION_NOTE, 142f);
-        font.getData().setScale(1.1f);
-        drawReportCentered("PRESS ENTER TO RESTART FROM YEAR 1, SEMESTER 1", 60f);
-        batch.end();
-        font.getData().setScale(2f);
-        font.setColor(Color.BLACK);
+        endingRenderer.render(batch, uiViewport, report);
     }
-
-    private void drawEndingCentered(String text, float y) {
-        textLayout.setText(endingFont, text);
-        endingFont.draw(batch, textLayout, (uiViewport.getWorldWidth() - textLayout.width) / 2f, y);
-    }
-
-    private void drawReportRight(String text, float right, float y) {
-        textLayout.setText(font, text);
-        font.draw(batch, textLayout, right - textLayout.width, y);
-    }
-
-    private void drawReportCentered(String text, float y) {
-        textLayout.setText(font, text);
-        font.draw(batch, textLayout, (uiViewport.getWorldWidth() - textLayout.width) / 2f, y);
-    }
-
     private void restartStage() {
         resetStageRuntime(currentStageNumber);
     }
 
     private void startNewGame() {
+        titleSelection = 0;
+        titleHelpVisible = false;
+        pauseReturnState = GameState.PLAYING;
+        gameOverSelection = 0;
+        vacationGame = null;
+        vacationManager.reset();
         Arrays.fill(completedResults, null);
         Arrays.fill(semesterDeaths, 0);
         totalDeathCount = 0;
@@ -389,17 +248,22 @@ public class Main extends ApplicationAdapter {
     }
 
     private void loadStage(int stageNumber) {
-        lives = MAX_LIVES;
+        vacationManager.enterStage(stageNumber);
+        semesterMaxLives = MAX_LIVES + vacationManager.modifierForStage(stageNumber).getExtraStartingLives();
+        lives = semesterMaxLives;
         semesterDeathCount = 0;
         semesterDeaths[stageNumber - 1] = 0;
         resetStageRuntime(stageNumber);
     }
 
     private void resetStageRuntime(int stageNumber) {
+        pauseReturnState = GameState.PLAYING;
+        hitFeedback.reset();
+        waitForHitKeyRelease = false;
         stage = StageFactory.createStage(stageNumber);
         currentStageNumber = stage.getStageNumber();
         // 이전 학기의 플레이어와 실행용 객체를 모두 교체합니다.
-        player = new Player(stage.getStartX(), stage.getStartY());
+        player = new Player(stage.getStartX(), stage.getStartY(), vacationManager.modifierForStage(stageNumber));
         flag = stage.getFlag();
         blocks = stage.getBlocks();
         gradeItems = stage.getGradeItems();
@@ -431,10 +295,53 @@ public class Main extends ApplicationAdapter {
     }
 
 
+    /** Confirm the finished game's actual result on the game thread; early or stale callbacks are rejected. */
+    public boolean completeVacationEvent(VacationEventType type, boolean success) {
+        if (gameState != GameState.VACATION_EVENT || vacationGame == null || !vacationGame.isFinished()
+            || vacationGame.getType() != type || vacationGame.isSuccess() != success
+            || !vacationManager.complete(type, success)) return false;
+        vacationGame = null;
+        loadStage(currentStageNumber + 1);
+        return true;
+    }
+
     private void update(float dt) {
+        if (gameState == GameState.DYING) {
+            if (hitFeedback.advance(dt)) {
+                boolean held = isGameplayKeyHeld();
+                applyDeath();
+                waitForHitKeyRelease = held;
+            }
+            return;
+        }
+        if (waitForHitKeyRelease) {
+            if (!isGameplayKeyHeld()) waitForHitKeyRelease = false;
+            return;
+        }
         if (gameState == GameState.TITLE_SCREEN) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) startNewGame();
+            updateTitleMenu();
             return; // Do not also apply movement, jump, or ESC on the start frame.
+        }
+        if (gameState == GameState.PAUSED) {
+            updatePauseMenu();
+            return; // No physics, item collection or world timers on menu-action frames.
+        }
+        if (gameState == GameState.GAME_OVER) {
+            updateGameOverMenu();
+            return;
+        }
+        if (gameState == GameState.VACATION_EVENT) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+                pauseSelection = 0;
+                pauseReturnState = GameState.VACATION_EVENT;
+                gameState = GameState.PAUSED;
+                return;
+            }
+            MinigameInput input = MinigameInput.read();
+            if (vacationGame.isFinished()) {
+                if (input.isPressed(Input.Keys.ENTER)) completeVacationEvent(vacationGame.getType(), vacationGame.isSuccess());
+            } else vacationGame.update(dt,input);
+            return; // Including after completion: no second input or world step on the transition frame.
         }
         // Consume report input separately, so simultaneous Space/Enter cannot also restart the game.
         if (gameState == GameState.GAME_COMPLETE) {
@@ -444,11 +351,8 @@ public class Main extends ApplicationAdapter {
         // 상태 입력은 물리 갱신 전에 처리하여 정지 상태에서도 동작합니다.
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             switch (gameState) {
-                case GAME_OVER:
-                    startNewGame();
-                    return;
                 case STAGE_CLEAR:
-                    loadStage(currentStageNumber + 1);
+                    continueAfterStageClear();
                     return;
                 case GRADUATION_ENDING:
                     startNewGame();
@@ -460,10 +364,9 @@ public class Main extends ApplicationAdapter {
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
             if (gameState == GameState.PLAYING) {
+                pauseSelection = 0;
+                pauseReturnState = GameState.PLAYING;
                 gameState = GameState.PAUSED;
-                return;
-            } else if (gameState == GameState.PAUSED) {
-                gameState = GameState.PLAYING;
                 return;
             }
         }
@@ -498,26 +401,136 @@ public class Main extends ApplicationAdapter {
                 break;
             }
         }
-        if (player.getY() < -100 || trapHit || enemyHit) {
-            semesterDeathCount++;
-            totalDeathCount++;
-            semesterDeaths[currentStageNumber - 1] = semesterDeathCount;
-            lives--;
-            if (lives == 0) gameState = GameState.GAME_OVER;
-            else restartStage();
-            return; // One death per frame; never clear or update the freshly reset runtime here.
+        if (player.getY() < -100) {
+            applyDeath(); // Off-screen falls retain the original immediate-death policy.
+            return;
+        }
+        if (trapHit || enemyHit) {
+            if (lives == 1) {
+                hitFeedback.reset();
+                applyDeath();
+            } else {
+                hitFeedback.start();
+                gameState = GameState.DYING;
+            }
+            return;
         }
 
         // 마지막 학기도 결과를 저장한 뒤 전체 완료로 전환합니다.
         else if (player.overlaps(flag)) {
             recordStageResult();
-            gameState = currentStageNumber == StageFactory.STAGE_COUNT
-                ? GameState.GAME_COMPLETE : GameState.STAGE_CLEAR;
+            gameState = GameState.STAGE_CLEAR;
         }
 
         // 6. 카메라는 X축으로만 따라갑니다.
         camera.position.x = getCameraX();
         camera.update();
+    }
+
+    private void applyDeath() {
+        semesterDeathCount++;
+        totalDeathCount++;
+        semesterDeaths[currentStageNumber - 1] = semesterDeathCount;
+        lives--;
+        if (lives == 0) {
+            gameOverSelection = 0;
+            gameState = GameState.GAME_OVER;
+        }
+        else restartStage();
+    }
+
+    private void continueAfterStageClear() {
+        // Results were confirmed once at the flag; only the existing destination moves behind Enter.
+        if (currentStageNumber == StageFactory.STAGE_COUNT) {
+            gameState = GameState.GAME_COMPLETE;
+        } else if (VacationEventType.afterStage(currentStageNumber) != null) {
+            vacationManager.beginAfterStage(currentStageNumber);
+            vacationGame = VacationMinigame.create(vacationManager.getPending());
+            gameState = GameState.VACATION_EVENT;
+        } else {
+            loadStage(currentStageNumber + 1);
+        }
+    }
+
+    private void updateGameOverMenu() {
+        boolean up = Gdx.input.isKeyJustPressed(Input.Keys.UP);
+        boolean down = Gdx.input.isKeyJustPressed(Input.Keys.DOWN);
+        if (up != down) {
+            gameOverSelection = 1 - gameOverSelection;
+            return;
+        }
+        if (!Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) return;
+        boolean title = gameOverSelection == 1;
+        startNewGame(); // Existing GAME_OVER reset: always Stage 1, never the failed semester.
+        if (title) {
+            gameState = GameState.TITLE_SCREEN;
+            waitForHitKeyRelease = true;
+        }
+    }
+
+    private void updatePauseMenu() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            gameState = pauseReturnState;
+            return;
+        }
+        boolean up = Gdx.input.isKeyJustPressed(Input.Keys.UP);
+        boolean down = Gdx.input.isKeyJustPressed(Input.Keys.DOWN);
+        if (up || down) {
+            if (up != down) pauseSelection = (pauseSelection + (down ? 1 : 2)) % 3;
+            return; // Navigation and confirmation never execute together.
+        }
+        if (!Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) return;
+        switch (pauseSelection) {
+            case 0:
+                gameState = pauseReturnState;
+                break;
+            case 1:
+                if (pauseReturnState == GameState.VACATION_EVENT) {
+                    // Pending vacation and saved semester results remain untouched; reward is not confirmed here.
+                    vacationGame = VacationMinigame.create(vacationManager.getPending());
+                    gameState = GameState.VACATION_EVENT;
+                } else restartStage(); // Same stage reset as a retry, without charging a life/death.
+                waitForHitKeyRelease = true;
+                break;
+            case 2:
+                startNewGame(); // Clear scores, deaths and vacation history before returning.
+                gameState = GameState.TITLE_SCREEN;
+                waitForHitKeyRelease = true;
+                break;
+            default:
+                throw new IllegalStateException("Unknown pause selection: " + pauseSelection);
+        }
+        pauseSelection = 0;
+    }
+
+    private void updateTitleMenu() {
+        if (titleHelpVisible) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) titleHelpVisible = false;
+            return; // Help never starts or exits the game, including simultaneous ESC/Enter.
+        }
+        boolean up = Gdx.input.isKeyJustPressed(Input.Keys.UP);
+        boolean down = Gdx.input.isKeyJustPressed(Input.Keys.DOWN);
+        if (up != down) {
+            titleSelection = (titleSelection + (down ? 1 : 2)) % 3;
+            return;
+        }
+        if (!Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) return;
+        switch (titleSelection) {
+            case 0: startNewGame(); break;
+            case 1: titleHelpVisible = true; break;
+            case 2: Gdx.app.exit(); break;
+            default: throw new IllegalStateException("Unknown title selection: " + titleSelection);
+        }
+    }
+
+    private boolean isGameplayKeyHeld() {
+        return Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)
+            || Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyPressed(Input.Keys.ENTER)
+            || Gdx.input.isKeyPressed(Input.Keys.R) || Gdx.input.isKeyPressed(Input.Keys.ESCAPE);
+    }
+
+    private Matrix4 getWorldRenderProjection() {
+        return worldRenderProjection.set(camera.combined).translate(-hitFeedback.getShakeX(),-hitFeedback.getShakeY(),0);
     }
 
     private float getCameraX() {
@@ -538,12 +551,23 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose() {
+        titleScreenRenderer.dispose();
+        vacationRenderer.dispose();
         batch.dispose();
-        playerTexture.dispose();
-        blockTexture.dispose();
+        playerSprites.dispose();
+        enemySprites.dispose();
+        trapSprites.dispose();
+        seasonalBackgroundRenderer.dispose();
+        fixedPlatformRenderer.dispose();
+        movingPlatformRenderer.dispose();
         flagTexture.dispose();
+        pixelHudRenderer.dispose();
+        pauseMenuRenderer.dispose();
+        gameOverRenderer.dispose();
+        stageClearRenderer.dispose();
+        gradeItemTexture.dispose();
         font.dispose();
-        endingFont.dispose();
+        resultCanvas.dispose();
         itemRenderer.dispose();
     }
 }

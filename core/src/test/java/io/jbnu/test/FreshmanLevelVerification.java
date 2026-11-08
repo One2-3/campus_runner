@@ -36,6 +36,17 @@ public final class FreshmanLevelVerification {
                     throw new UnsupportedOperationException(method.getName());
                 });
             verifyDefinitions();
+            SpikeCollisionVerification.main(args);
+            SeasonalBackgroundVerification.main(args);
+            PlatformOutlineVerification.main(args);
+            PixelHudVerification.main(args);
+            PauseMenuVerification.main(args);
+            GameOverVerification.main(args);
+            StageClearVerification.main(args);
+            FinalPixelUiVerification.main(args);
+            VacationThemeVerification.main(args);
+            VacationKoreanVerification.main(args);
+            VacationPauseVerification.main(args);
             for (int fps : new int[] {30, 60, 120}) {
                 verifyPhysics(fps);
                 verifyRoute(fps, false);
@@ -49,6 +60,13 @@ public final class FreshmanLevelVerification {
             FinalReportVerification.main(args);
             GraduationEndingVerification.main(args);
             TitleScreenVerification.main(args);
+            TitleMenuVerification.main(args);
+            VacationSystemVerification.main(args);
+            VacationMinigamesVerification.main(args);
+            ServerConnectionVerification.main(args);
+            PlayerPixelArtVerification.main(args);
+            HitFeedbackVerification.main(args);
+            FinalIntegrationVerification.main(args);
             System.out.println("Freshman verification passed: layout, 4 items / 20 points, "
                 + "30/60/120 fps route, pause, retry, eight semesters and score retention.");
         } finally {
@@ -354,7 +372,7 @@ public final class FreshmanLevelVerification {
             player(game).reset(flag.x, flag.y);
             tick(game);
             total += count * 5;
-            check(state(game) == (number == 8 ? GameState.GAME_COMPLETE : GameState.STAGE_CLEAR),
+            check(state(game) == VacationVerificationSupport.clearState(number),
                 "Correct clear state for semester " + number);
             StageResult[] results = (StageResult[]) get(game, "completedResults");
             check(results.length == 8, "Eight result slots");
@@ -366,11 +384,13 @@ public final class FreshmanLevelVerification {
             totalMethod.setAccessible(true);
             check((Integer) totalMethod.invoke(game) == LifeVerificationSupport.expectedTotal(game,total), "Total includes all completed semesters");
             if (number == 8) {
+                VacationVerificationSupport.continueClear(game);
                 jump = true; tick(game);
                 check(state(game) == GameState.GRADUATION_ENDING, "Space opens graduation ending after report");
             }
             enter = true;
             tick(game);
+            VacationVerificationSupport.finishIfPending(game, false);
             check((Integer) get(game, "currentStageNumber") == (number == 8 ? 1 : number + 1),
                 "Enter advances or restarts");
             check((Integer) get(game, "stageScore") == 0 && (Integer) get(game, "collectedItemCount") == 0,

@@ -2,8 +2,6 @@ package io.jbnu.test;
 
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.graphics.Texture;
-import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
@@ -13,22 +11,33 @@ public class Player {
     private static final float MOVE_SPEED = 260;
     private static final float JUMP_SPEED = 650;
     private static final float GRAVITY = 1700;
+    private final PlayerModifier modifier;
 
     private final Rectangle bounds = new Rectangle(0, 0, 32, 44);
     private float velocityX, velocityY;
     private boolean grounded;
+    private boolean facingRight = true;
     private MovingPlatform supportingPlatform;
     private static final float CONTACT_EPSILON = 0.01f;
 
     public Player(float startX, float startY) {
+        this(startX, startY, PlayerModifier.NONE);
+    }
+
+    public Player(float startX, float startY, PlayerModifier modifier) {
+        if (modifier == null) throw new IllegalArgumentException("Player modifier is required");
+        this.modifier = modifier;
         reset(startX, startY);
     }
+
+    public PlayerModifier getModifier() { return modifier; }
 
     public void reset(float startX, float startY) {
         bounds.setPosition(startX, startY);
         velocityX = 0;
         velocityY = 0;
         grounded = false;
+        facingRight = true;
         supportingPlatform = null;
     }
 
@@ -41,10 +50,12 @@ public class Player {
         if (dt <= 0) return;
 
         velocityX = 0;
-        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) velocityX -= MOVE_SPEED;
-        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) velocityX += MOVE_SPEED;
+        if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) velocityX -= MOVE_SPEED * modifier.getMoveSpeedMultiplier();
+        if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) velocityX += MOVE_SPEED * modifier.getMoveSpeedMultiplier();
+        if (velocityX > 0) facingRight = true;
+        else if (velocityX < 0) facingRight = false;
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) && grounded) {
-            velocityY = JUMP_SPEED;
+            velocityY = JUMP_SPEED * modifier.getJumpPowerMultiplier();
             grounded = false;
             supportingPlatform = null;
         }
@@ -169,9 +180,9 @@ public class Player {
         return true;
     }
 
-    public void render(SpriteBatch batch, Texture texture) {
-        batch.draw(texture, bounds.x, bounds.y, bounds.width, bounds.height);
-    }
+    public boolean isGrounded() { return grounded; }
+    public boolean isMovingHorizontally() { return velocityX != 0; }
+    public boolean isFacingRight() { return facingRight; }
 
     public float getCenterX() {
         return bounds.x + bounds.width / 2f;

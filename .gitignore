@@ -116,6 +116,9 @@ www-test/
 /shared/nbbuild/
 
 /dist/
+# Windows release archives stay local; selected README screenshots are tracked under docs/screenshots/.
+/CampusRunner-Windows-*.zip
+/CampusRunner-Windows-*.zip.sha256
 /android/dist/
 /core/dist/
 /lwjgl2/dist/

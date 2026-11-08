@@ -89,14 +89,16 @@ public final class FinalReportVerification {
             expectedBonus += BONUSES[deaths];
             Rectangle flag = (Rectangle)get(game,"flag");
             player(game).reset(flag.x,flag.y); tick(game);
-            check(get(game,"gameState") == (stage == 8 ? GameState.GAME_COMPLETE : GameState.STAGE_CLEAR),
+            check(get(game,"gameState") == VacationVerificationSupport.clearState(stage),
                 "Normal flag completion, with Stage 8 saved before report entry");
             StageResult saved = ((StageResult[])get(game,"completedResults"))[stage-1];
             check(saved != null && saved.getItemScore() == MAXIMA[stage-1] - (partial ? 5 : 0)
                 && saved.getDeathCount() == deaths && saved.getSurvivalBonus() == BONUSES[deaths], "Actual saved row");
+            if (stage == 8) VacationVerificationSupport.continueClear(game);
             if (stage < 8) {
                 check(REPORT.invoke(game) == null, "Report hidden between semesters");
                 enter = true; tick(game);
+                VacationVerificationSupport.finishIfPending(game, false);
                 check(number(game,"semesterDeathCount") == 0 && number(game,"lives") == 5,
                     "Normal next-semester life rules preserved");
             }

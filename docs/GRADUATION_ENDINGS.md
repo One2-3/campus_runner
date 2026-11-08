@@ -1,5 +1,39 @@
 # Campus Runner — GPA별 졸업 엔딩
 
+## STEP 10-10 픽셀 엔딩 UI (2026-11-08)
+
+`EndingRenderer`에서 기존 enum의 제목·두 줄 메시지·강조색을 그대로 표시한다.
+FinalReportRenderer와 PixelResultCanvas의 영어/한글 폰트·흰색 Texture를 공유한다.
+FinalReport/GraduationEnding의 GPA·정수 점수 기준과 메시지 원문은 변경하지 않았다.
+
+- 크림 패널·갈색 테두리/글씨·전체 창 어두운 오버레이로 다른 메뉴와 통일했다.
+- 기본 패널 640×480, 기존 FitViewport로 균일 확대·중앙 정렬한다.
+- 최우수: 기존 금색, 우수: 기존 파랑, 일반: 기존 초록, 간신히: 기존 주황, 유예: 기존 붉은 계열 강조.
+- 성공 등급은 코드로 그린 계단형 졸업모와 작은 장식, 유예는 닫힌 노트 장식을 표시한다.
+  유예에는 졸업 성공 메시지나 성공 장식을 표시하지 않는다.
+- GPA/4.50, FINAL SCORE/465, TOTAL DEATHS는 같은 FinalReport에서 읽는다.
+- 기존 PRECISION_NOTE를 두 화면 모두 표시한다. 반올림된 GPA 때문에 등급이 달라지지 않는다.
+- 원본 PNG·폰트 파일을 수정하지 않고 Nearest를 적용한다.
+  기존 한글 공백의 0 advance는 새 공유 폰트 인스턴스에서만 보정해 띄어쓰기를 읽기 쉽게 했다.
+
+검증: 최종 Gradle build 및 30/60/120fps 기존 회귀 검증 통과.
+0~465의 모든 점수 경계와 465점/GPA 4.50, 실제 부분 수집·사망 보너스·누적 사망 집계 검증 유지.
+5개 등급을 800×600 / 1280×720 / 1920×1080 실제 GUI로 캡처하고 대표 화면을 확인했다.
+5개 제목·색상·기존 메시지 정상, 잘림/겹침 없음.
+동시 Space/Enter 및 키 유지가 화면을 여러 단계 건너뛰지 않으며,
+성적표/엔딩의 월드 정지와 Enter 전체 초기화, 공유 리소스 해제를 확인했다.
+상세 결과와 전체 변경 파일은 [FINAL_REPORT.md](FINAL_REPORT.md)의 STEP 10-10 절을 따른다.
+
+- [엔딩 전후 비교](../build/final-pixel-gui/ending-before-after-800x600.png)
+- [5개 엔딩 모음](../build/final-pixel-gui/five-endings.png)
+- [최우수 800×600](../build/final-pixel-gui/after-ending-highest_honors-800x600.png)
+- [우수 1280×720](../build/final-pixel-gui/after-ending-honors-1280x720.png)
+- [일반 1920×1080](../build/final-pixel-gui/after-ending-graduated-1920x1080.png)
+- [간신히 800×600](../build/final-pixel-gui/after-ending-barely_graduated-800x600.png)
+- [유예 800×600](../build/final-pixel-gui/after-ending-deferred-800x600.png)
+
+확인 범위에서 남은 GUI 문제는 없다. Git commit/push/merge는 실행하지 않았다.
+
 ## 등급과 정확한 판정
 
 기존 `FinalReport`의 점수·GPA 계산과 저장된 8개 StageResult를 재사용한다.
@@ -33,7 +67,8 @@ GPA는 화면에서만 소수점 둘째 자리까지 표시한다. 예를 들어
 ```mermaid
 flowchart LR
     Flag[Stage 8 깃발] --> Save[Stage 8 결과 저장]
-    Save --> Report[GAME_COMPLETE / 최종 성적표]
+    Save --> Clear[STAGE_CLEAR / 4-2 성적표]
+    Clear -- Enter --> Report[GAME_COMPLETE / 최종 성적표]
     Report -- Space --> Ending[GRADUATION_ENDING / GPA별 결과]
     Ending -- Enter --> Reset[startNewGame / 모든 기록 초기화]
     Reset --> Stage1[Stage 1 / PLAYING / 목숨 5]
@@ -51,7 +86,7 @@ Stage 9는 생성하지 않으며 GAME_OVER의 Enter 전체 초기화는 그대�
 
 ## 화면과 메시지
 
-기존 UI FitViewport(800×600), ShapeRenderer·SpriteBatch·BitmapFont를 재사용한다.
+기존 UI FitViewport(800×600), SpriteBatch·BitmapFont를 재사용한다.
 모든 엔딩에 CAMPUS RUNNER, GRADUATION RESULT, 한글 등급, GPA / 4.50,
 FINAL SCORE / 465, TOTAL DEATHS, 두 줄 메시지, 반올림 안내, Enter 재시작 안내를 표시한다.
 등급 글자와 상단 강조 띠에 등급별 색을 사용하며 본문은 어두운 색으로 가독성을 유지한다.
@@ -71,7 +106,7 @@ FINAL SCORE / 465, TOTAL DEATHS, 두 줄 메시지, 반올림 안내, Enter 재�
 기본 BitmapFont에 한글이 없어 `assets/fonts/ending-ko.fnt`와 `ending-ko.png`를 추가했다.
 ASCII와 실제 엔딩 문구에 필요한 한글을 합쳐 181개 글리프만 포함하며 TTF는 배포하지 않는다.
 실행 시 시스템 폰트·네트워크·추가 라이브러리가 필요 없다.
-개발용 `tools/GenerateEndingFont.ps1`은 Windows의 맑은 고딕(`malgun.ttf`)에서 이 글리프를 래스터화한다.
+개발용 `tools/GenerateEndingFont.ps1`은 STEP 10-16부터 기존 `tools/fonts/NanumGothic-Bold.ttf` (SIL OFL 1.1)에서 이 글리프를 래스터화한다. 파생물 이름은 Campus Ending Korean이며 ending-ko-OFL.txt를 함께 배포한다. 이전 맑은 고딕 파생 아틀라스는 새 후보본에서 교체했다.
 저장소 루트에서 실행하면 enum의 문구를 읽어 아틀라스를 다시 만들 수 있다.
 문구 변경 후에는 스크립트를 재실행하고 글리프 검증을 통과해야 한다.
 

@@ -4,8 +4,10 @@ package io.jbnu.test;
 public enum GameState {
     TITLE_SCREEN,
     PLAYING,
+    DYING,
     PAUSED,
     STAGE_CLEAR,
+    VACATION_EVENT,
     GAME_OVER,
     GAME_COMPLETE,
     GRADUATION_ENDING

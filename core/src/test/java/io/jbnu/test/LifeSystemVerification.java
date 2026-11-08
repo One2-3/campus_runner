@@ -73,6 +73,7 @@ public final class LifeSystemVerification {
                 for (int i = 0; i < 8; i++) tick(game);
                 check(results(game)[stage-1] == result && total(game) == result.getFinalScore(), "Bonus cannot be added twice");
                 enter = true; tick(game);
+                VacationVerificationSupport.finishIfPending(game, false);
                 if (stage < 8) {
                     check(number(game,"currentStageNumber") == stage+1 && number(game,"lives") == 5
                         && number(game,"semesterDeathCount") == 0 && results(game)[stage-1] == result,
@@ -93,6 +94,7 @@ public final class LifeSystemVerification {
         for (int stage = 1; stage < target; stage++) {
             for (int death = 0; death < stage%5; death++) dieByFall(game);
             collectAll(game); clear(game); enter = true; tick(game);
+            VacationVerificationSupport.finishIfPending(game, false);
         }
         check(number(game,"currentStageNumber") == target && number(game,"lives") == 5, "Requested exhaustion stage reached normally");
         StageResult[] prior = results(game).clone();
@@ -150,7 +152,7 @@ public final class LifeSystemVerification {
             collectAll(game); clear(game);
             expectedTotal += ITEM_MAXIMA[stage-1]+20;
             check(total(game) == expectedTotal && results(game)[stage-1].getSurvivalBonus() == 20, "No-death confirmed result");
-            if (stage < 8) { enter = true; tick(game); }
+            if (stage < 8) { enter = true; tick(game); VacationVerificationSupport.finishIfPending(game, false); }
         }
         check(expectedTotal == 465 && total(game) == 465 && state(game) == GameState.GAME_COMPLETE
             && number(game,"currentStageNumber") == 8 && results(game).length == 8,
@@ -181,7 +183,7 @@ public final class LifeSystemVerification {
                 && result.getSurvivalBonus() == BONUSES[semesterLosses[stage-1]] && total(game) == expectedScore,
                 "Survival bonus uses semester deaths, never total deaths");
             check(number(game,"totalDeathCount") == expectedDeaths, "Recording a result preserves cumulative deaths");
-            if (stage < 8) { enter = true; tick(game); }
+            if (stage < 8) { enter = true; tick(game); VacationVerificationSupport.finishIfPending(game, false); }
         }
         for (int i = 0; i < 180; i++) tick(game);
         escape = true; tick(game);
@@ -212,6 +214,10 @@ public final class LifeSystemVerification {
         ((Array<TimedTrap>)get(game,"timedTraps")).add(TimedTrap.fixedSpikes(80,60,32,44));
         ((Array<PatrollingEnemy>)get(game,"enemies")).add(new PatrollingEnemy(80,60,28,28,70,100,10,true));
         tick(game);
+        check(state(game) == GameState.DYING && number(game,"lives") == 4 && number(game,"semesterDeathCount") == 1,
+            "Simultaneous contacts start one feedback interval before charging a life");
+        int feedbackFrames = (int)Math.ceil(1f/dt)+2;
+        while (state(game) == GameState.DYING && --feedbackFrames > 0) tick(game);
         check(number(game,"lives") == 3 && number(game,"semesterDeathCount") == 2, "Simultaneous enemy and spikes cost one life");
         check(number(game,"totalDeathCount") == 2, "Simultaneous hazards increment cumulative deaths only once");
         verifyRuntimeReset(game);
@@ -278,7 +284,8 @@ public final class LifeSystemVerification {
     }
     private static void clear(Main game) throws Exception {
         Rectangle flag = (Rectangle)get(game,"flag"); player(game).reset(flag.x,flag.y); tick(game);
-        check(state(game) == (number(game,"currentStageNumber") == 8 ? GameState.GAME_COMPLETE : GameState.STAGE_CLEAR), "Normal flag completion");
+        check(state(game) == VacationVerificationSupport.clearState(number(game,"currentStageNumber")), "Normal flag completion");
+        if (number(game,"currentStageNumber") == 8) VacationVerificationSupport.continueClear(game);
     }
     private static void dieByFall(Main game) throws Exception { player(game).reset(80,-150); tick(game); }
     private static boolean grounded(Main game) throws Exception { return (Boolean)field(Player.class,"grounded").get(player(game)); }

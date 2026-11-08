@@ -46,6 +46,7 @@ public final class SophomoreSemester2Verification {
             for (int i = 0; i < 3; i++) check(results(game)[i] == prior[i], "Retry keeps semester " + i);
             route(game, false, true);
             enter = true; tick(game);
+            VacationVerificationSupport.finishIfPending(game, false);
             check(number(game, "currentStageNumber") == 5 && state(game) == GameState.PLAYING && !LifeVerificationSupport.died(game)
                 && number(game, "stageScore") == 0 && ((Array<?>) get(game, "gradeItems")).size == 8,
                 "Stage 5 loads eight items and fresh score");
@@ -228,19 +229,33 @@ public final class SophomoreSemester2Verification {
             restart(game);
         }
         Main top = newGame(); tick(top); move(top, 360); jump = true; move(top, 440);
-        waitFor(top, () -> LifeVerificationSupport.died(top), 2, "Land on fixed spike tips");
-        check(LifeVerificationSupport.failedPlayer(top).getY() > 60 && LifeVerificationSupport.failedTrap(top,0).isDangerousTo(LifeVerificationSupport.failedPlayer(top)), "Fixed top contact");
+        float previousFootY = player(top).getY();
+        int landingFrames = (int) (2 / dt) + 1;
+        while (!LifeVerificationSupport.died(top) && --landingFrames > 0) {
+            previousFootY = player(top).getY(); tick(top);
+        }
+        check(landingFrames > 0, "Land on fixed spike tips");
+        Player landed = LifeVerificationSupport.failedPlayer(top);
+        TimedTrap landedTrap = LifeVerificationSupport.failedTrap(top,0);
+        float visibleTipY = landedTrap.getSpikeLayout().getTopY();
+        check(previousFootY >= visibleTipY && landed.getY() < visibleTipY
+            && landed.getY() + landed.getBounds().height > visibleTipY && landedTrap.isDangerousTo(landed),
+            "Descending body crosses actual visible tip (30fps may reach the floor in one step)");
         for (int index = 4; index < 6; index++) {
             for (boolean attemptJump : new boolean[] {false, true}) {
                 Main game = newGame(); reachTimed(game, false, false);
                 if (index == 5) crossTimed(game, 4, 2170);
                 final int selected = index;
+                Rectangle bounds = trap(game, index).getBounds();
+                // A correctly timed jump can now clear the shorter visible spikes.
+                // This negative case deliberately starts too late, beside the first
+                // actual triangle, and must still produce real contact at every fps.
+                if (attemptJump) move(game, bounds.x - 33);
                 waitFor(game, () -> trap(game, selected).getState() == TrapState.ACTIVE
                     && trap(game, selected).getStateElapsedTime() < .08, 5, "Fresh ACTIVE " + index);
-                Rectangle bounds = trap(game, index).getBounds();
                 jump = attemptJump;
                 move(game, bounds.x + (attemptJump ? bounds.width + 10 : 30));
-                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Active walk/jump cannot skip timed section " + index);
+                waitFor(game, () -> LifeVerificationSupport.died(game), 2, "Walk or deliberately late jump hits visible timed spikes " + index);
                 check(LifeVerificationSupport.failedTrap(game,index).isDangerousTo(LifeVerificationSupport.failedPlayer(game)), "Active spike hit " + index);
                 restart(game);
             }

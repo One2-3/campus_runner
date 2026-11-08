@@ -1,129 +1,79 @@
-# Campus Runner — 메인 시작 화면
+# Campus Runner — 메인 타이틀 (STEP 10-12)
 
-## 시작 화면 구조
+## 화면 구성
 
-처음 실행하면 `Main`의 초기 상태는 `TITLE_SCREEN`이다.
-`create()`는 기존 그래픽 리소스·월드 카메라·UI 카메라·viewport만 준비하고,
-`startNewGame()`을 호출하지 않는다. Enter 전에는 StageDefinition·플레이어·아이템·적·가시·이동 발판을
-생성하지 않으므로 게임 월드와 물리가 진행될 수 없다.
+`TitleScreenRenderer`가 메인 메뉴와 게임 방법을 담당한다. 기존 크림색 결과 화면과 구분되는 남색·청록·금색 테마다. CAMPUS RUNNER, “학점을 모아 졸업까지 달려라!”, 기존 A+ 별과 코드로 그린 픽셀 졸업모를 표시한다.
 
-`render()`는 기존 `update()`를 호출한 뒤 TITLE_SCREEN이면 `renderTitleScreen()`만 실행하고 반환한다.
-월드 렌더링, 플레이 HUD, 성적표, 엔딩 렌더링은 시작 화면과 분리되어 있다.
+봄 낮 캠퍼스 PNG와 기존 SeasonalBackgroundRenderer를 재사용한다. 고정 가상 중심으로 배경을 그려 월드 카메라에 영향받지 않는다. 기존 비율·색감 보정을 유지하며 남색 56% 오버레이로 가독성을 높인다. 배경은 창 전체를 채우고 UI는 기존 800×600 FitViewport로 중앙 정렬한다. 원본 PNG는 수정하지 않았다.
 
-표시 내용:
+## 메뉴와 입력
 
-- CAMPUS RUNNER
-- 8 SEMESTERS TO GRADUATION
-- Collect credits. Survive semesters. Graduate!
-- LEFT / RIGHT ARROWS - MOVE
-- SPACE - JUMP
-- ESC - PAUSE / RESUME
-- PRESS ENTER TO START
+기존 `TITLE_SCREEN`을 유지하며 `titleSelection`, `titleHelpVisible`로 화면을 관리한다. 새 게임 상태를 추가하지 않는다. 최초 타이틀에서 StageDefinition과 Player를 만들지 않고 월드 업데이트 없이 반환한다.
 
-이동·점프 키는 `Player.update()`의 LEFT/RIGHT·SPACE, 일시정지 키는 `Main.update()`의 ESCAPE를 확인했다.
-기존 조작키를 바꾸지 않았다.
+- 위/아래: 게임 시작 / 게임 방법 / 게임 종료 순환. 기본 선택은 게임 시작이다.
+- Enter: 선택 실행. 방향키와 Enter가 같은 프레임이면 이동만 처리한다.
+- 게임 방법: 실제 코드의 좌우 방향키 이동·Space 점프·Esc 일시정지/재개와 학점·장애물·8학기·방학 미니게임 3종·최종 GPA·다섯 엔딩을 안내한다. Enter는 무시하고 Esc로 원래 선택에 복귀한다. Esc+Enter도 안내만 닫는다.
+- 게임 시작: 기존 `startNewGame()`을 재사용해 Stage 1, 목숨·점수·학기 결과·사망 기록·방학 효과와 타이틀 선택 상태를 초기화한다.
+- 게임 종료: `Gdx.app.exit()`으로 정상 종료하고 기존 dispose 흐름을 사용한다.
 
-## Enter 입력과 기존 재시작
+`isKeyJustPressed`를 사용하므로 키를 누르고 있는 동안 메뉴가 반복 이동하지 않는다. GAME_OVER TITLE 및 PAUSED QUIT은 기존 초기화를 거쳐 기본 타이틀로 복귀한다. GAME_OVER RESTART와 졸업 엔딩 Enter는 기존대로 타이틀을 거치지 않고 Stage 1 새 게임을 시작한다. 성적표 Space → 엔딩 전환도 유지한다. 엔딩에 새 타이틀 복귀 입력은 추가하지 않았다.
 
-```mermaid
-flowchart TD
-    Launch[최초 실행] --> Title[TITLE_SCREEN / 월드 없음]
-    Title -- Enter --> Start[startNewGame]
-    Over[목숨 소진 / GAME_OVER] -- Enter --> Start
-    Report[Stage 8 완료 / GAME_COMPLETE 성적표] -- Space --> Ending[GRADUATION_ENDING]
-    Ending -- Enter --> Start
-    Start --> Play[Stage 1 / PLAYING / 목숨 5]
+## 최초 실행과 초기화 보장
+
+`Main`의 초기 상태는 `TITLE_SCREEN`이다. `create()`는 렌더링 리소스를 준비하고 `startNewGame()`을 호출하지 않으므로, 시작 선택 전에는 Stage 1과 플레이어를 생성하거나 월드를 진행하지 않는다. `render()`는 타이틀을 별도로 그린 뒤 반환하여 월드와 HUD가 함께 표시되지 않게 한다.
+
+시작 선택을 처리한 프레임에도 `update()`에서 즉시 반환한다. Enter와 이동·점프·Esc를 동시에 눌러도 그 프레임에 게임 플레이 입력이 추가 적용되지 않는다. PLAYING에서는 Enter를 계속 눌러도 새 게임 초기화를 반복하지 않는다.
+
+새 게임은 기존 공통 초기화로 모든 학기의 `StageResult`, 점수·생존 보너스·사망 기록, 전체 누적 사망 횟수와 방학 효과를 지우고 Stage 1의 플레이어·아이템·장애물을 복원한다. 목숨은 5개로 시작한다. 성적표 Space → 졸업 엔딩 Enter → Stage 1, GAME_OVER RESTART → Stage 1 흐름은 유지한다.
+
+초기 STEP 8-1의 영문 Enter 안내 화면은 현재의 한국어 메뉴·게임 방법 화면으로 발전했다. 초기 구현의 타이틀 진입·월드 정지·입력 분리 규칙과 `TitleScreenVerification`은 유지하며, 현재 메뉴 동작은 `TitleMenuVerification`으로 추가 검증한다.
+
+## 폰트와 리소스
+
+기존 `tools/fonts/NanumGothic-Bold.ttf`로 타이틀 전용 비트맵 부분집합 **Campus Title Korean**을 생성했다. 기존 방학·엔딩 폰트는 변경하지 않았다. SIL OFL 1.1 안내는 `assets/fonts/title-ko-OFL.txt`에 동봉한다. 새 다운로드나 라이브러리는 없다.
+
+재생성 명령 (저장소 루트):
+
+```powershell
+& .\tools\GenerateVacationFont.ps1 -OutputStem title-ko -FaceName 'Campus Title Korean' -SourcePaths @('core/src/main/java/io/jbnu/test/TitleScreenRenderer.java')
 ```
 
-TITLE_SCREEN은 Enter의 `isKeyJustPressed`만 확인한다. Enter가 없으면 다른 키를 무시하고 즉시 반환한다.
-Enter가 있으면 기존 `startNewGame()`으로 초기화한 후에도 즉시 반환하므로,
-같은 프레임에 누른 화살표·Space·ESC를 새 월드에 적용하지 않는다.
-다음 갱신부터는 PLAYING의 기존 입력 처리를 사용한다. Enter를 누른 채 유지하거나
-PLAYING에서 다시 눌러도 초기화 분기에 진입하지 않는다.
-
-TITLE_SCREEN을 설정하는 경로는 최초 상태 선언뿐이다.
-GAME_OVER Enter와 졸업 엔딩 Enter는 기존처럼 바로 Stage 1을 시작하며 타이틀로 돌아가지 않는다.
-성적표 Enter 무시·Space로 엔딩 전환하는 규칙도 유지한다.
-
-공통 초기화는 모든 StageResult·학기 점수·보너스·학기 사망 기록·전체 누적 사망을 삭제한다.
-전체 점수는 비워진 결과의 합계인 0이 된다. Stage 1 원본으로 런타임을 새로 만들고,
-현재 아이템 점수·수집 개수·학기 사망 0, 목숨 5, PLAYING으로 전환한다.
-
-## UI 렌더링
-
-기존 800×600 UI FitViewport와 고정된 uiCamera를 사용한다.
-월드 카메라 위치나 플레이어 좌표를 사용하지 않으며, 창 크기 변경 시 같은 UI 비율을 유지한다.
-가로세로 비율이 다른 창에서는 FitViewport의 여백으로 전체 내용을 보존한다.
-
-어두운 남색 배경에 금색 제목과 졸업모, 밝은 설명·시작 안내를 배치했다.
-중앙 조작 안내 패널과 하단 양쪽 캠퍼스 건물 실루엣은 ShapeRenderer로 그린다.
-기존 BitmapFont와 SpriteBatch를 그대로 사용한다. 시작 화면은 영문이므로
-추가 한글 글리프나 새 이미지·라이브러리가 필요 없다.
-렌더링 후 폰트 크기와 색상을 기존 HUD 설정(2배, 검정)으로 되돌린다.
-점멸·시간 효과는 추가하지 않아 프레임레이트에 따른 화면 차이가 없다.
+전용 폰트를 초기화 시 한 번 로드하고 Nearest 필터로 렌더링한다. 매 프레임 텍스처를 만들지 않는다. 별·배경·흰색 픽셀은 기존 텍스처를 빌려 쓰며 Main이 해제하고, 전용 폰트는 TitleScreenRenderer가 해제한다. 렌더링 뒤 배치의 셰이더·색상·투영/변환 행렬·블렌딩과 공유 폰트 상태를 복원한다.
 
 ## 자동 검증
 
-`TitleScreenVerification`을 기존 `FreshmanLevelVerification` 실행 체인에 연결했다.
-`.\gradlew.bat build` 성공 (JDK 17 실행, Java 8 소스 호환 유지).
+`TitleMenuVerification`을 기존 FreshmanLevelVerification 실행 체인에 추가했다. 기존 TitleScreenVerification도 유지한다. `.\gradlew.bat build` 성공. 30·60·120fps에서 다음 항목이 통과했다.
 
-| 검증 | 30fps | 60fps | 120fps |
-| --- | --- | --- | --- |
-| 최초 TITLE_SCREEN·Enter 전 3초 동안 월드 미생성 | 통과 | 통과 | 통과 |
-| 화살표·Space·ESC로 시작/물리/장애물 갱신 불가 | 통과 | 통과 | 통과 |
-| Enter+다른 키 동시 입력 시 정확한 Stage 1 초기 위치 | 통과 | 통과 | 통과 |
-| 시작 직후 목숨 5·아이템 점수/수집/학기 사망/누적 사망 0 | 통과 | 통과 | 통과 |
-| 시작 직후 모든 결과·보너스·학기 사망 기록 비어 있음 | 통과 | 통과 | 통과 |
-| Enter 유지 2초 동안 동일 런타임 유지 | 통과 | 통과 | 통과 |
-| 아이템 획득 후 반복 Enter에도 점수/런타임 유지 | 통과 | 통과 | 통과 |
-| Stage 4의 다섯 사망 후 GAME_OVER Enter로 바로 Stage 1 | 통과 | 통과 | 통과 |
-| 성적표 → Space → 엔딩 → Enter로 바로 Stage 1 (기존 검증) | 통과 | 통과 | 통과 |
-| 목숨·사망·생존 보너스·GPA·다섯 엔딩 회귀 | 통과 | 통과 | 통과 |
-| Stage 1~8 실제 이동/점프·수집·충돌 경로 회귀 | 통과 | 통과 | 통과 |
+- 최초 타이틀·월드 미생성, 메뉴 순환, 누른 키 중복 방지.
+- 게임 방법 진입·Esc 복귀와 동시 입력 우선순위.
+- 새 게임 초기화 및 PLAYING에서 Enter 중복 초기화 방지.
+- 다섯 번째 사망 후 GAME_OVER TITLE 복귀·선택 초기화.
+- 종료 메뉴의 정확히 한 번 종료 요청.
+- 모든 타이틀 문구 글리프와 폰트 라이선스 파일 존재.
+- 기존 8학기 실제 이동/점프 경로, 목숨·피격·방학 3종·점수·성적표·GPA·엔딩 및 UI 회귀 검증.
 
-시작 화면 테스트는 플레이어와 장애물 참조가 없는 상태로 업데이트를 실행하므로
-Enter 전 월드 진행이 발생하지 않음을 확인한다. 아이템 획득·GAME_OVER 확인에는
-기존 생명주기 검증과 같은 위치 픽스처로 실제 수집·사망 처리를 실행한다.
-맵 진행 가능 여부는 기존 실제 입력 경로 검증을 그대로 유지한다.
+## develop / origin/main 충돌 해결 검증
+
+초기 타이틀 구현과 최신 메뉴 구현이 겹친 구간을 비교하여, 전용 렌더러와 최신 상태 처리를 유지하고 초기 구현의 진입·입력 분리 규칙을 확인했다. 두 타이틀 검증과 피격·방학·전체 통합 검증 호출을 모두 유지했다.
+
+충돌 해결 후 `.\gradlew.bat build`가 종료 코드 0으로 완료됐다. 기존 8학기 경로·목숨·방학 3종·성적표·엔딩 회귀 검증과 30·60·120fps 전체 진행 통합 시나리오 9개가 통과했다. 로그는 `build/merge-review/build.log`에 있다. 이번 충돌 해결 작업에서는 GUI를 다시 실행하지 않았으며, 아래 GUI 기록은 이전 타이틀 리디자인 당시의 검증 결과다.
 
 ## 실제 GUI 확인
 
-LWJGL3 창에서 실제 `Main.create()`·`render()`를 실행했다.
-임시 검증 도구(`build/title-gui/TitleGuiSmoke.java`, Git 제외)는 시작 화면 상태와 월드 미생성을 확인하고,
-창 크기를 변경해 프레임버퍼를 캡처했다. 이어 한 프레임의 Enter 입력을 주입하여
-PLAYING 진입을 검증하고 Stage 1 화면도 캡처한 뒤 자동 종료했다.
-초기 GUI 검증 도구는 LWJGL이 매 프레임 Gdx.input을 설정하는 순서 때문에 주입이 적용되지 않았으며,
-검증 도구에서 렌더 직전에 입력을 주입하도록 수정한 후 통과했다. 제품 입력 코드는 바꾸지 않았다.
+LWJGL3에서 실제 Main.create/render/resize를 실행하고 키 입력을 주입했다. 800×600, 1280×720, 1920×1080 모두 메뉴 선택·게임 방법·게임 시작·GAME_OVER TITLE 복귀를 검증했다. 캡처에서 글리프 누락·잘림·메뉴 겹침·흰 여백이 없음을 확인했다. 월드 카메라 이동 전후 타이틀 캡처가 동일했다.
 
-| GUI 항목 | 결과 |
-| --- | --- |
-| 640×480 (기존 데스크톱 기본 크기) | 제목·조작법·시작 안내 잘림/겹침 없음 |
-| 800×600 | 중앙 정렬·졸업모·안내 패널 정상 |
-| 1280×720 | FitViewport 비율·좌우 여백·전체 안내 정상 |
-| Enter 주입 후 Stage 1 | YEAR 1·SEMESTER 1·LIVES 5/5·ITEMS 0/4·SCORE 0 확인 |
+실제 종료 메뉴로 창이 종료되고 dispose가 한 번 실행되며 전용 폰트·별·배경 텍스처가 해제됨을 검증했다. 다른 배치 셰이더·색상·행렬·블렌딩과 공유 폰트 설정을 적용한 뒤에도 렌더링 후 모두 복원됐다.
 
-현재 워크스페이스의 캡처:
+| 해상도 | 타이틀 | 게임 방법 |
+| --- | --- | --- |
+| 800×600 | [메뉴](../build/title-redesign-gui/after-menu-start-800x600.png) | [안내](../build/title-redesign-gui/after-help-800x600.png) |
+| 1280×720 | [메뉴](../build/title-redesign-gui/after-menu-start-1280x720.png) | [안내](../build/title-redesign-gui/after-help-1280x720.png) |
+| 1920×1080 | [메뉴](../build/title-redesign-gui/after-menu-start-1920x1080.png) | [안내](../build/title-redesign-gui/after-help-1920x1080.png) |
 
-- [640×480 시작 화면](../build/title-gui/title-640x480.png)
-- [800×600 시작 화면](../build/title-gui/title-800x600.png)
-- [1280×720 시작 화면](../build/title-gui/title-1280x720.png)
-- [Enter 이후 Stage 1](../build/title-gui/stage1-after-enter.png)
+[800×600 변경 전후: 왼쪽 기존, 오른쪽 신규](../build/title-redesign-gui/comparison-800x600.png)
 
-캡처와 임시 도구는 build 디렉터리에 있어 Git에 포함되지 않는다.
-물리 키보드를 이용한 수동 플레이는 수행하지 않았다. 직접 확인할 항목:
+캡처·GUI 도구와 로그는 Git 제외 `build/title-redesign-gui/`에 있다. 빌드 로그는 `build.log`, GUI 로그는 `after.log`다.
 
-- 실제 Enter를 길게 누르거나 Space/ESC와 동시에 눌러도 한 번만 시작되는지 확인.
-- Stage 1에서 좌우 화살표·Space·ESC가 안내대로 동작하는지 확인.
-- 창을 매우 작게 줄이거나 최대화했을 때도 안내를 읽을 수 있는지 확인.
-- GAME_OVER와 졸업 엔딩의 Enter가 시작 화면 없이 Stage 1로 직접 돌아가는지 확인.
+남은 수동 확인: 물리 키보드로 장시간 누르기·빠른 연속 누르기를 확인한다. GUI 검증은 코드로 키 입력을 주입했으며 사람이 키보드를 직접 조작한 것으로 보고하지 않는다. 발견된 미해결 기능·레이아웃 문제는 없다.
 
-## 변경 파일과 범위
-
-- `core/src/main/java/io/jbnu/test/Main.java`: 초기 TITLE_SCREEN·별도 렌더링·Enter 처리.
-- `core/src/main/java/io/jbnu/test/GameState.java`: TITLE_SCREEN 추가.
-- `core/src/test/java/io/jbnu/test/TitleScreenVerification.java`: 시작 상태와 입력·초기화 검증 추가.
-- `core/src/test/java/io/jbnu/test/FreshmanLevelVerification.java`: 새 검증 호출 추가.
-- `docs/TITLE_SCREEN.md`: 구조와 검증 기록.
-
-Stage 1~8 맵·Player 물리·조작키·장애물·목숨·보너스·GPA·성적표 내용·엔딩 기준은 유지했다.
-Git commit·push·merge는 실행하지 않는다.
+게임 맵·물리·다른 UI·점수·GPA·엔딩 규칙은 변경하지 않았다. Git commit, push, merge는 실행하지 않았다.
