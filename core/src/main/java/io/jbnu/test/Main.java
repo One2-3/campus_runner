@@ -18,7 +18,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 
 import java.util.Arrays;
-import java.util.Locale;
+
 
 
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
@@ -49,7 +49,9 @@ public class Main extends ApplicationAdapter {
     private OrthographicCamera uiCamera;
     private FitViewport uiViewport;
     private BitmapFont font;
-    private BitmapFont endingFont;
+    private PixelResultCanvas resultCanvas;
+    private FinalReportRenderer finalReportRenderer;
+    private EndingRenderer endingRenderer;
     private GlyphLayout textLayout;
     private ShapeRenderer itemRenderer;
 
@@ -106,7 +108,9 @@ public class Main extends ApplicationAdapter {
         font = new BitmapFont();
         font.setColor(Color.BLACK);
         font.getData().setScale(2f);
-        endingFont = new BitmapFont(Gdx.files.internal("fonts/ending-ko.fnt"));
+        resultCanvas = new PixelResultCanvas();
+        finalReportRenderer = new FinalReportRenderer(resultCanvas);
+        endingRenderer = new EndingRenderer(resultCanvas);
         textLayout = new GlyphLayout();
         vacationRenderer = new VacationMinigameRenderer(batch, itemRenderer, font, uiViewport, uiCamera);
 
@@ -129,12 +133,11 @@ public class Main extends ApplicationAdapter {
 
         ScreenUtils.clear(1f,1f,1f,1f);
 
-        if (gameState == GameState.GAME_COMPLETE) {
-            renderFinalReport(getFinalReport());
-            return;
-        }
-        if (gameState == GameState.GRADUATION_ENDING) {
-            renderGraduationEnding(getFinalReport());
+        if (gameState == GameState.GAME_COMPLETE || gameState == GameState.GRADUATION_ENDING) {
+            seasonalBackgroundRenderer.render(batch, currentStageNumber, stage.getWorldWidth(), camera.position.x,
+                Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
+            if (gameState == GameState.GAME_COMPLETE) renderFinalReport(getFinalReport());
+            else renderGraduationEnding(getFinalReport());
             return;
         }
         if (gameState == GameState.VACATION_EVENT) {
@@ -261,109 +264,12 @@ public class Main extends ApplicationAdapter {
     }
 
     private void renderFinalReport(FinalReport report) {
-        uiViewport.apply();
-        itemRenderer.setProjectionMatrix(uiCamera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        itemRenderer.setColor(0.94f, 0.96f, 0.98f, 1f);
-        itemRenderer.rect(32f, 96f, 736f, 426f);
-        itemRenderer.setColor(0.82f, 0.88f, 0.93f, 1f);
-        itemRenderer.rect(50f, 478f, 700f, 32f);
-        for (int i = 0; i < report.getSemesterCount(); i += 2) {
-            itemRenderer.setColor(0.88f, 0.92f, 0.95f, 1f);
-            itemRenderer.rect(50f, 450f - i * 28f, 700f, 28f);
-        }
-        itemRenderer.setColor(0.3f, 0.4f, 0.5f, 1f);
-        itemRenderer.rect(50f, 244f, 700f, 2f);
-        itemRenderer.end();
-
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        font.setColor(0.1f, 0.2f, 0.3f, 1f);
-        font.getData().setScale(2f);
-        drawReportCentered("FINAL ACADEMIC REPORT", 574f);
-        font.getData().setScale(1.2f);
-        drawReportCentered("CAMPUS RUNNER", 540f);
-        font.getData().setScale(1.1f);
-        font.draw(batch, "SEMESTER", 70f, 500f);
-        drawReportRight("ITEM SCORE", 370f, 500f);
-        drawReportRight("SURVIVAL BONUS", 570f, 500f);
-        drawReportRight("FINAL", 730f, 500f);
-        for (int i = 0; i < report.getSemesterCount(); i++) {
-            StageResult result = report.getSemester(i);
-            float y = 472f - i * 28f;
-            font.draw(batch, (i / 2 + 1) + "-" + (i % 2 + 1), 95f, y);
-            drawReportRight(result.getItemScore() + " / " + report.getItemMaximum(i), 370f, y);
-            drawReportRight(result.getSurvivalBonus() + " / 20", 570f, y);
-            drawReportRight(result.getFinalScore() + " / " + (report.getItemMaximum(i) + 20), 730f, y);
-        }
-        font.draw(batch, "TOTAL ITEM SCORE: " + report.getTotalItemScore() + " / " + FinalReport.MAX_ITEM_SCORE, 64f, 222f);
-        font.draw(batch, "TOTAL SURVIVAL BONUS: " + report.getTotalSurvivalBonus() + " / " + FinalReport.MAX_SURVIVAL_BONUS, 64f, 194f);
-        font.getData().setScale(1.4f);
-        font.draw(batch, "FINAL SCORE: " + report.getFinalScore() + " / " + FinalReport.MAX_FINAL_SCORE, 64f, 150f);
-        font.setColor(0.65f, 0.15f, 0.15f, 1f);
-        font.getData().setScale(1.2f);
-        font.draw(batch, "TOTAL DEATHS: " + report.getTotalDeathCount(), 490f, 222f);
-        font.setColor(0.1f, 0.2f, 0.3f, 1f);
-        font.draw(batch, String.format(Locale.ROOT, "GPA: %.2f / 4.50", report.getGpa()), 490f, 186f);
-        font.getData().setScale(1.1f);
-        font.draw(batch, String.format(Locale.ROOT, "SCORE RATE: %.2f%%", report.getScoreRate()), 490f, 150f);
-        drawReportCentered("PRESS SPACE TO VIEW GRADUATION RESULT", 60f);
-        batch.end();
-        font.getData().setScale(2f);
-        font.setColor(Color.BLACK);
+        finalReportRenderer.render(batch, uiViewport, report);
     }
 
     private void renderGraduationEnding(FinalReport report) {
-        GraduationEnding ending = report.getEnding();
-        int rgb = ending.getColorRgb();
-        Color accent = new Color(((rgb >> 16) & 255) / 255f, ((rgb >> 8) & 255) / 255f, (rgb & 255) / 255f, 1f);
-        uiViewport.apply();
-        itemRenderer.setProjectionMatrix(uiCamera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        itemRenderer.setColor(0.94f, 0.96f, 0.98f, 1f);
-        itemRenderer.rect(32f, 96f, 736f, 426f);
-        itemRenderer.setColor(accent);
-        itemRenderer.rect(32f, 514f, 736f, 8f);
-        itemRenderer.end();
-
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        font.setColor(0.1f, 0.2f, 0.3f, 1f);
-        font.getData().setScale(1.2f);
-        drawReportCentered("CAMPUS RUNNER", 570f);
-        font.getData().setScale(2f);
-        drawReportCentered("GRADUATION RESULT", 490f);
-        endingFont.setColor(accent);
-        endingFont.getData().setScale(1.5f);
-        drawEndingCentered(ending.getTitle(), 432f);
-        font.setColor(0.1f, 0.2f, 0.3f, 1f);
-        font.getData().setScale(1.4f);
-        drawReportCentered(String.format(Locale.ROOT, "GPA: %.2f / 4.50", report.getGpa()), 366f);
-        drawReportCentered("FINAL SCORE: " + report.getFinalScore() + " / " + FinalReport.MAX_FINAL_SCORE, 328f);
-        drawReportCentered("TOTAL DEATHS: " + report.getTotalDeathCount(), 290f);
-        endingFont.setColor(0.1f, 0.2f, 0.3f, 1f);
-        endingFont.getData().setScale(0.85f);
-        drawEndingCentered(ending.getMessage(), 236f);
-        drawEndingCentered(ending.getDetail(), 198f);
-        endingFont.getData().setScale(0.65f);
-        drawEndingCentered(GraduationEnding.PRECISION_NOTE, 142f);
-        font.getData().setScale(1.1f);
-        drawReportCentered("PRESS ENTER TO RESTART FROM YEAR 1, SEMESTER 1", 60f);
-        batch.end();
-        font.getData().setScale(2f);
-        font.setColor(Color.BLACK);
+        endingRenderer.render(batch, uiViewport, report);
     }
-
-    private void drawEndingCentered(String text, float y) {
-        textLayout.setText(endingFont, text);
-        endingFont.draw(batch, textLayout, (uiViewport.getWorldWidth() - textLayout.width) / 2f, y);
-    }
-
-    private void drawReportRight(String text, float right, float y) {
-        textLayout.setText(font, text);
-        font.draw(batch, textLayout, right - textLayout.width, y);
-    }
-
     private void drawReportCentered(String text, float y) {
         textLayout.setText(font, text);
         font.draw(batch, textLayout, (uiViewport.getWorldWidth() - textLayout.width) / 2f, y);
@@ -669,7 +575,7 @@ public class Main extends ApplicationAdapter {
         stageClearRenderer.dispose();
         gradeItemTexture.dispose();
         font.dispose();
-        endingFont.dispose();
+        resultCanvas.dispose();
         itemRenderer.dispose();
     }
 }

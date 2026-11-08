@@ -43,6 +43,7 @@ public final class FreshmanLevelVerification {
             PauseMenuVerification.main(args);
             GameOverVerification.main(args);
             StageClearVerification.main(args);
+            FinalPixelUiVerification.main(args);
             for (int fps : new int[] {30, 60, 120}) {
                 verifyPhysics(fps);
                 verifyRoute(fps, false);
