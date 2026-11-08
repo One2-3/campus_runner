@@ -44,6 +44,9 @@ public final class FreshmanLevelVerification {
             GameOverVerification.main(args);
             StageClearVerification.main(args);
             FinalPixelUiVerification.main(args);
+            VacationThemeVerification.main(args);
+            VacationKoreanVerification.main(args);
+            VacationPauseVerification.main(args);
             for (int fps : new int[] {30, 60, 120}) {
                 verifyPhysics(fps);
                 verifyRoute(fps, false);

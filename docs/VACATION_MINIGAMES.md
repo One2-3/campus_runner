@@ -3,11 +3,16 @@
 STEP 9-1의 임시 S/F 결과 선택을 제거하고 실제 입력·시간 제한·점수/퍼즐 판정으로 교체했다.
 방학 결과와 PlayerModifier 규칙은 [VACATION_SYSTEM.md](VACATION_SYSTEM.md)를 유지한다.
 
+STEP 10-11에서 카페 브라운·스터디 블루·서버 네이비/민트의 독립 픽셀 UI를 적용했다.
+시작/플레이/성공/실패 화면의 현재 디자인, 리소스, 검증 결과와 비교 캡처는
+[VACATION_MINIGAME_UI.md](VACATION_MINIGAME_UI.md)를 따른다. 이 작업에서 게임 규칙은 변경하지 않았다.
+
 ## 공통 진행과 책임
 
 ```mermaid
 flowchart LR
-    Flag[Stage 2/4/6 결과 저장] --> Intro[VACATION_EVENT / INTRO 안내]
+    Flag[Stage 2/4/6 결과 저장] --> Clear[STAGE_CLEAR / 학기 성적표]
+    Clear -- Enter --> Intro[VACATION_EVENT / INTRO 안내]
     Intro -- Enter --> Play[PLAYING / 실제 조작과 타이머]
     Play -- 게임 판정 --> Result[RESULT / 성공 또는 실패 표시]
     Result -- Enter --> Confirm[기존 방학 결과 확정]
