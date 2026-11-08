@@ -35,6 +35,7 @@ public class Main extends ApplicationAdapter {
     private PauseMenuRenderer pauseMenuRenderer;
     private int pauseSelection;
     private GameOverRenderer gameOverRenderer;
+    private StageClearRenderer stageClearRenderer;
     private int gameOverSelection;
     private PlayerSprites playerSprites;
     private EnemySprites enemySprites;
@@ -91,6 +92,7 @@ public class Main extends ApplicationAdapter {
         pixelHudRenderer = new PixelHudRenderer(gradeItemTexture);
         pauseMenuRenderer = new PauseMenuRenderer();
         gameOverRenderer = new GameOverRenderer();
+        stageClearRenderer = new StageClearRenderer();
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 800, 600);
@@ -248,29 +250,9 @@ public class Main extends ApplicationAdapter {
             return;
         }
 
-        String title;
-        String instruction;
-        switch (gameState) {
-            case STAGE_CLEAR:
-                title = "YEAR " + stage.getYear() + " - SEMESTER " + stage.getSemester() + " CLEAR";
-                instruction = "PRESS ENTER FOR NEXT SEMESTER";
-                break;
-            default:
-                return;
+        if (gameState == GameState.STAGE_CLEAR) {
+            stageClearRenderer.render(batch, uiViewport, completedResults[currentStageNumber - 1], gradeItems.size);
         }
-
-        uiViewport.apply();
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        textLayout.setText(font, title);
-        font.draw(batch, textLayout,
-            (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-            (uiViewport.getWorldHeight() + textLayout.height) / 2f);
-        textLayout.setText(font, instruction);
-        font.draw(batch, textLayout,
-            (uiViewport.getWorldWidth() - textLayout.width) / 2f,
-            uiViewport.getWorldHeight() / 2f - 40f);
-        batch.end();
     }
 
     private FinalReport getFinalReport() {
@@ -499,7 +481,7 @@ public class Main extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) {
             switch (gameState) {
                 case STAGE_CLEAR:
-                    loadStage(currentStageNumber + 1);
+                    continueAfterStageClear();
                     return;
                 case GRADUATION_ENDING:
                     startNewGame();
@@ -565,12 +547,7 @@ public class Main extends ApplicationAdapter {
         // 마지막 학기도 결과를 저장한 뒤 전체 완료로 전환합니다.
         else if (player.overlaps(flag)) {
             recordStageResult();
-            if (currentStageNumber == StageFactory.STAGE_COUNT) gameState = GameState.GAME_COMPLETE;
-            else if (VacationEventType.afterStage(currentStageNumber) != null) {
-                vacationManager.beginAfterStage(currentStageNumber);
-                vacationGame = VacationMinigame.create(vacationManager.getPending());
-                gameState = GameState.VACATION_EVENT;
-            } else gameState = GameState.STAGE_CLEAR;
+            gameState = GameState.STAGE_CLEAR;
         }
 
         // 6. 카메라는 X축으로만 따라갑니다.
@@ -588,6 +565,19 @@ public class Main extends ApplicationAdapter {
             gameState = GameState.GAME_OVER;
         }
         else restartStage();
+    }
+
+    private void continueAfterStageClear() {
+        // Results were confirmed once at the flag; only the existing destination moves behind Enter.
+        if (currentStageNumber == StageFactory.STAGE_COUNT) {
+            gameState = GameState.GAME_COMPLETE;
+        } else if (VacationEventType.afterStage(currentStageNumber) != null) {
+            vacationManager.beginAfterStage(currentStageNumber);
+            vacationGame = VacationMinigame.create(vacationManager.getPending());
+            gameState = GameState.VACATION_EVENT;
+        } else {
+            loadStage(currentStageNumber + 1);
+        }
     }
 
     private void updateGameOverMenu() {
@@ -676,6 +666,7 @@ public class Main extends ApplicationAdapter {
         pixelHudRenderer.dispose();
         pauseMenuRenderer.dispose();
         gameOverRenderer.dispose();
+        stageClearRenderer.dispose();
         gradeItemTexture.dispose();
         font.dispose();
         endingFont.dispose();

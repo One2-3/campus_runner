@@ -206,7 +206,7 @@ public final class JuniorSemester2Verification {
         reachThird(game,partial,exercise); passThird(game);
         move(game,2940); leap(game,3090,320); leap(game,3240,400); move(game,3340);
         int count = partial ? 8 : 9;
-        check(state(game) == GameState.VACATION_EVENT && number(game,"collectedItemCount") == count
+        check(state(game) == GameState.STAGE_CLEAR && number(game,"collectedItemCount") == count
             && results(game)[5].getItemScore() == count * 5 && results(game)[5].getCollectedItemCount() == count,
             "Full/partial clear and record; actual count=" + number(game,"collectedItemCount"));
         check(seenHud == (1 << (count + 1)) - 1, "Every HUD count 0 through " + count);

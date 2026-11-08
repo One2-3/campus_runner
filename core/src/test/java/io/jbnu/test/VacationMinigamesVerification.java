@@ -162,6 +162,8 @@ public final class VacationMinigamesVerification {
         player(game).reset(first.x,first.y); tick(game,MinigameInput.NONE);
         Rectangle flag = (Rectangle)get(game,"flag"); player(game).reset(flag.x,flag.y);
         tick(game,MinigameTestDriver.key(Input.Keys.ENTER));
+        check(get(game,"gameState") == GameState.STAGE_CLEAR,"Flag-frame Enter cannot skip semester report");
+        tick(game,MinigameTestDriver.key(Input.Keys.ENTER));
         VacationMinigame minigame = (VacationMinigame)get(game,"vacationGame");
         check(get(game,"gameState") == GameState.VACATION_EVENT && minigame.getType() == type
             && minigame.getPhase() == VacationMinigame.Phase.INTRO,"Correct game intro; flag-frame Enter cannot skip it");

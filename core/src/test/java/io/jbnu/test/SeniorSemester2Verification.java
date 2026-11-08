@@ -169,8 +169,9 @@ public final class SeniorSemester2Verification {
         frames=seenHud=branchMask=0;cameraAudit=true;
         descend(game);branch(game,mode);tower(game,exercise);graduation(game,exercise);
         cameraAudit=false;int count=(mode==1||mode==2)?10:12;
-        check(state(game)==GameState.GAME_COMPLETE&&number(game,"currentStageNumber")==8&&number(game,"collectedItemCount")==count
+        check(state(game)==GameState.STAGE_CLEAR&&number(game,"currentStageNumber")==8&&number(game,"collectedItemCount")==count
             &&results(game)[7].getItemScore()==count*5&&results(game)[7].getCollectedItemCount()==count,"Actual completion/score; count="+number(game,"collectedItemCount"));
+        VacationVerificationSupport.continueClear(game);
         check(seenHud==(1<<(count+1))-1,"Every HUD count 0 through "+count);
         Array<?> items=(Array<?>)get(game,"gradeItems");
         for(int i=0;i<12;i++){boolean skipped=(mode==1&&(i==4||i==5))||(mode==2&&(i==2||i==3));check(((GradeItem)items.get(i)).isCollected()!=skipped,"Intended branch item "+i);}

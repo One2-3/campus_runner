@@ -94,6 +94,7 @@ public final class FinalReportVerification {
             StageResult saved = ((StageResult[])get(game,"completedResults"))[stage-1];
             check(saved != null && saved.getItemScore() == MAXIMA[stage-1] - (partial ? 5 : 0)
                 && saved.getDeathCount() == deaths && saved.getSurvivalBonus() == BONUSES[deaths], "Actual saved row");
+            if (stage == 8) VacationVerificationSupport.continueClear(game);
             if (stage < 8) {
                 check(REPORT.invoke(game) == null, "Report hidden between semesters");
                 enter = true; tick(game);
