@@ -1,0 +1,20 @@
+import groovy.json.JsonOutput
+import java.security.MessageDigest
+
+// Audit the resolved runtime, not every unrelated artifact present in the Gradle cache.
+gradle.projectsEvaluated {
+    def desktop = gradle.rootProject.project(':lwjgl3')
+    desktop.tasks.register('exportRuntimeLicenses') {
+        dependsOn ':core:jar'
+        doLast {
+            def records = desktop.configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts.collect { a ->
+                [group: a.moduleVersion.id.group, name: a.name, version: a.moduleVersion.id.version,
+                 classifier: a.classifier ?: '', file: a.file.name,
+                 sha256: MessageDigest.getInstance('SHA-256').digest(a.file.bytes).encodeHex().toString()]
+            }.sort { a, b -> (a.group + ':' + a.file) <=> (b.group + ':' + b.file) }
+            def output = gradle.rootProject.file('packaging/DEPENDENCY_INVENTORY.json')
+            output.setText(JsonOutput.prettyPrint(JsonOutput.toJson(records)) + '\n', 'UTF-8')
+            println "Audited ${records.size()} resolved runtime artifacts: packaging/DEPENDENCY_INVENTORY.json"
+        }
+    }
+}

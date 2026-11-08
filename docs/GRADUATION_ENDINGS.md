@@ -106,7 +106,7 @@ FINAL SCORE / 465, TOTAL DEATHS, 두 줄 메시지, 반올림 안내, Enter 재�
 기본 BitmapFont에 한글이 없어 `assets/fonts/ending-ko.fnt`와 `ending-ko.png`를 추가했다.
 ASCII와 실제 엔딩 문구에 필요한 한글을 합쳐 181개 글리프만 포함하며 TTF는 배포하지 않는다.
 실행 시 시스템 폰트·네트워크·추가 라이브러리가 필요 없다.
-개발용 `tools/GenerateEndingFont.ps1`은 Windows의 맑은 고딕(`malgun.ttf`)에서 이 글리프를 래스터화한다.
+개발용 `tools/GenerateEndingFont.ps1`은 STEP 10-16부터 기존 `tools/fonts/NanumGothic-Bold.ttf` (SIL OFL 1.1)에서 이 글리프를 래스터화한다. 파생물 이름은 Campus Ending Korean이며 ending-ko-OFL.txt를 함께 배포한다. 이전 맑은 고딕 파생 아틀라스는 새 후보본에서 교체했다.
 저장소 루트에서 실행하면 enum의 문구를 읽어 아틀라스를 다시 만들 수 있다.
 문구 변경 후에는 스크립트를 재실행하고 글리프 검증을 통과해야 한다.
 
