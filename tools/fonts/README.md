@@ -1,5 +1,7 @@
 # 미니게임 한글 폰트 원본
 
+타이틀에도 같은 OFL 원본을 사용한다. 별도 `Campus Title Korean` 부분집합과 라이선스를 `assets/fonts/title-ko.*`, `title-ko-OFL.txt`에 생성한다. 기존 방학·엔딩 아틀라스는 수정하지 않는다. 재생성 명령은 `docs/TITLE_SCREEN.md`를 참고한다.
+
 - 원본: Google Fonts의 NanumGothic-Bold.ttf (https://github.com/google/fonts/tree/main/ofl/nanumgothic)
 - 저작권: Copyright (c) 2010, NHN Corporation.
 - 라이선스: SIL Open Font License 1.1, [OFL.txt](OFL.txt).

@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
-import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.math.MathUtils;
@@ -50,10 +49,12 @@ public class Main extends ApplicationAdapter {
     private OrthographicCamera uiCamera;
     private FitViewport uiViewport;
     private BitmapFont font;
+    private TitleScreenRenderer titleScreenRenderer;
+    private int titleSelection;
+    private boolean titleHelpVisible;
     private PixelResultCanvas resultCanvas;
     private FinalReportRenderer finalReportRenderer;
     private EndingRenderer endingRenderer;
-    private GlyphLayout textLayout;
     private ShapeRenderer itemRenderer;
 
     private Player player;
@@ -109,10 +110,10 @@ public class Main extends ApplicationAdapter {
         font = new BitmapFont();
         font.setColor(Color.BLACK);
         font.getData().setScale(2f);
+        titleScreenRenderer = new TitleScreenRenderer(seasonalBackgroundRenderer, gradeItemTexture, font);
         resultCanvas = new PixelResultCanvas();
         finalReportRenderer = new FinalReportRenderer(resultCanvas);
         endingRenderer = new EndingRenderer(resultCanvas);
-        textLayout = new GlyphLayout();
         vacationRenderer = new VacationMinigameRenderer(batch, itemRenderer, uiViewport, uiCamera);
 
     }
@@ -186,51 +187,7 @@ public class Main extends ApplicationAdapter {
     }
 
     private void renderTitleScreen() {
-        ScreenUtils.clear(0.035f, 0.06f, 0.13f, 1f);
-        uiViewport.apply();
-        itemRenderer.setProjectionMatrix(uiCamera.combined);
-        itemRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        // A simple mortarboard and tassel, drawn entirely in UI coordinates.
-        itemRenderer.setColor(0.98f, 0.81f, 0.36f, 1f);
-        itemRenderer.triangle(344f, 530f, 400f, 550f, 456f, 530f);
-        itemRenderer.triangle(344f, 530f, 456f, 530f, 400f, 510f);
-        itemRenderer.rect(378f, 492f, 44f, 17f);
-        itemRenderer.rect(453f, 495f, 3f, 35f);
-        itemRenderer.circle(454.5f, 493f, 4f, 16);
-        itemRenderer.setColor(0.085f, 0.13f, 0.22f, 1f);
-        itemRenderer.rect(150f, 160f, 500f, 136f);
-        // Campus silhouettes leave the central text area clear.
-        itemRenderer.rect(28f, 0f, 92f, 82f);
-        itemRenderer.triangle(18f, 82f, 74f, 112f, 130f, 82f);
-        itemRenderer.rect(680f, 0f, 92f, 82f);
-        itemRenderer.triangle(670f, 82f, 726f, 112f, 782f, 82f);
-        itemRenderer.setColor(0.98f, 0.81f, 0.36f, 1f);
-        itemRenderer.rect(180f, 295f, 440f, 2f);
-        itemRenderer.end();
-
-        batch.setProjectionMatrix(uiCamera.combined);
-        batch.begin();
-        font.setColor(0.98f, 0.81f, 0.36f, 1f);
-        font.getData().setScale(3.2f);
-        drawReportCentered("CAMPUS RUNNER", 460f);
-        font.setColor(0.76f, 0.83f, 0.94f, 1f);
-        font.getData().setScale(1.4f);
-        drawReportCentered("8 SEMESTERS TO GRADUATION", 401f);
-        font.getData().setScale(1.15f);
-        drawReportCentered("Collect credits. Survive semesters. Graduate!", 354f);
-        font.setColor(0.98f, 0.81f, 0.36f, 1f);
-        font.getData().setScale(1.2f);
-        drawReportCentered("CONTROLS", 279f);
-        font.setColor(0.9f, 0.94f, 1f, 1f);
-        font.getData().setScale(1.1f);
-        drawReportCentered("LEFT / RIGHT ARROWS  -  MOVE", 245f);
-        drawReportCentered("SPACE  -  JUMP", 217f);
-        drawReportCentered("ESC  -  PAUSE / RESUME", 189f);
-        font.getData().setScale(1.6f);
-        drawReportCentered("PRESS ENTER TO START", 116f);
-        batch.end();
-        font.getData().setScale(2f);
-        font.setColor(Color.BLACK);
+        titleScreenRenderer.render(batch, uiViewport, titleSelection, titleHelpVisible);
     }
 
     private void renderHud() {
@@ -273,16 +230,13 @@ public class Main extends ApplicationAdapter {
     private void renderGraduationEnding(FinalReport report) {
         endingRenderer.render(batch, uiViewport, report);
     }
-    private void drawReportCentered(String text, float y) {
-        textLayout.setText(font, text);
-        font.draw(batch, textLayout, (uiViewport.getWorldWidth() - textLayout.width) / 2f, y);
-    }
-
     private void restartStage() {
         resetStageRuntime(currentStageNumber);
     }
 
     private void startNewGame() {
+        titleSelection = 0;
+        titleHelpVisible = false;
         pauseReturnState = GameState.PLAYING;
         gameOverSelection = 0;
         vacationGame = null;
@@ -365,7 +319,7 @@ public class Main extends ApplicationAdapter {
             return;
         }
         if (gameState == GameState.TITLE_SCREEN) {
-            if (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) startNewGame();
+            updateTitleMenu();
             return; // Do not also apply movement, jump, or ESC on the start frame.
         }
         if (gameState == GameState.PAUSED) {
@@ -549,6 +503,26 @@ public class Main extends ApplicationAdapter {
         pauseSelection = 0;
     }
 
+    private void updateTitleMenu() {
+        if (titleHelpVisible) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) titleHelpVisible = false;
+            return; // Help never starts or exits the game, including simultaneous ESC/Enter.
+        }
+        boolean up = Gdx.input.isKeyJustPressed(Input.Keys.UP);
+        boolean down = Gdx.input.isKeyJustPressed(Input.Keys.DOWN);
+        if (up != down) {
+            titleSelection = (titleSelection + (down ? 1 : 2)) % 3;
+            return;
+        }
+        if (!Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) return;
+        switch (titleSelection) {
+            case 0: startNewGame(); break;
+            case 1: titleHelpVisible = true; break;
+            case 2: Gdx.app.exit(); break;
+            default: throw new IllegalStateException("Unknown title selection: " + titleSelection);
+        }
+    }
+
     private boolean isGameplayKeyHeld() {
         return Gdx.input.isKeyPressed(Input.Keys.LEFT) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)
             || Gdx.input.isKeyPressed(Input.Keys.SPACE) || Gdx.input.isKeyPressed(Input.Keys.ENTER)
@@ -577,6 +551,7 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void dispose() {
+        titleScreenRenderer.dispose();
         vacationRenderer.dispose();
         batch.dispose();
         playerSprites.dispose();
